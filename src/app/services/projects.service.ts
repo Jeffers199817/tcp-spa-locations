@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { Project } from '../models/project.model';
+import { Project, ProjectMapConfig } from '../models/project.model';
 import { SupabaseService } from './supabase.service';
 
 @Injectable({
@@ -223,7 +223,41 @@ export class ProjectsService {
           }
         ]
       }
-    ]
+    ],
+    mapConfig: {
+      regionName: 'Ciudad de México • Jardines del Pedregal & San Telmo',
+      centerLat: 19.3242,
+      centerLng: -99.2014,
+      zoom: 12,
+      mapStyle: 'cinematic',
+      logisticsNotes: 'Acceso por Anillo Periférico Sur y Av. Paseo del Pedregal. Espacio reservado para 3 camiones de 10T y planta 125kW en Villa Pedregal. San Telmo cuenta con rampa industrial.',
+      markers: [
+        {
+          name: 'Villa Moderna Pedregal',
+          category: 'Locación Principal',
+          lat: 19.3242,
+          lng: -99.2014,
+          address: 'Paseo del Pedregal #420, Jardines del Pedregal, CDMX',
+          logisticsNote: 'Acometida trifásica 80A • Estacionamiento para 6 camiones técnicos'
+        },
+        {
+          name: 'Hangar Industrial San Telmo',
+          category: 'Nave Industrial',
+          lat: 19.4930,
+          lng: -99.1620,
+          address: 'Eje 1 Poniente Calzada Vallejo, San Telmo, CDMX',
+          logisticsNote: 'Altura libre 9m • Trifásica 125A • Rampa vehicular 10T'
+        },
+        {
+          name: 'Casa Colonial Coyoacán',
+          category: 'Patrimonio Histórico',
+          lat: 19.3498,
+          lng: -99.1610,
+          address: 'Calle Francisco Sosa #88, Coyoacán, CDMX',
+          logisticsNote: 'Patio de arcos s.XVIII • Callejón empedrado catalogado INAH'
+        }
+      ]
+    }
   };
 
   // ==================== PROYECTO 2: Campaña Primavera-Costa 2026 ====================
@@ -343,7 +377,33 @@ export class ProjectsService {
           }
         ]
       }
-    ]
+    ],
+    mapConfig: {
+      regionName: 'Oaxaca / Costa Esmeralda • Puerto Escondido & Mazunte',
+      centerLat: 15.8601,
+      centerLng: -97.0722,
+      zoom: 11,
+      mapStyle: 'satellite',
+      logisticsNotes: 'Carretera Costera Federal 200. Se recomienda transporte en pickups 4x4 para el acceso final al acantilado de Zicatela. Base Camp en Mazunte.',
+      markers: [
+        {
+          name: 'Villa Acantilado Zicatela',
+          category: 'Locación Acantilado',
+          lat: 15.8520,
+          lng: -97.0510,
+          address: 'Camino al Faro s/n, Punta Zicatela, Oaxaca',
+          logisticsNote: 'Luz rasante atardecer • Brisa moderada • Permiso costero federal'
+        },
+        {
+          name: 'Casa Palapa Mazunte',
+          category: 'Residencia de Playa',
+          lat: 15.6660,
+          lng: -96.5540,
+          address: 'Rinconcito de Mazunte, Santa María Tonameca, Oaxaca',
+          logisticsNote: 'Estructuras de teca y palma • Aislamiento sonoro natural'
+        }
+      ]
+    }
   };
 
   // ==================== PROYECTO 3: Comercial Fragancia Noir Q3 ====================
@@ -452,7 +512,33 @@ export class ProjectsService {
           }
         ]
       }
-    ]
+    ],
+    mapConfig: {
+      regionName: 'Polanco & Bosque de Chapultepec, CDMX',
+      centerLat: 19.4326,
+      centerLng: -99.1912,
+      zoom: 14,
+      mapStyle: 'dark',
+      logisticsNotes: 'Zona Polanco / Paseo de la Reforma. Permisos de rodaje CDMX FILMA vigentes. Horario nocturno 20:00 a 05:00 hrs.',
+      markers: [
+        {
+          name: 'Mansión Neoclásica Campos Elíseos',
+          category: 'Mansión Francesa',
+          lat: 19.4310,
+          lng: -99.1945,
+          address: 'Campos Elíseos #380, Polanco V Sección, CDMX',
+          logisticsNote: 'Escalinatas de mármol Carrara • Jardín privado amurallado'
+        },
+        {
+          name: 'Mansión Neo-Clásica Roma Norte',
+          category: 'Biblioteca Antigua',
+          lat: 19.4180,
+          lng: -99.1620,
+          address: 'Calle Colima #120, Roma Norte, CDMX',
+          logisticsNote: 'Vitrales modernistas • Estacionamiento en predio anexo'
+        }
+      ]
+    }
   };
 
   // ==================== PROYECTO 4: Lanzamiento Automotriz Eléctrico 2026 ====================
@@ -540,7 +626,33 @@ export class ProjectsService {
           }
         ]
       }
-    ]
+    ],
+    mapConfig: {
+      regionName: 'Valle de Bravo & Autopista Toluca-Zitácuaro',
+      centerLat: 19.1925,
+      centerLng: -100.1302,
+      zoom: 13,
+      mapStyle: 'streets',
+      logisticsNotes: 'Pista de pruebas cerrada de 3.2km. Base Camp con 4 supercargadores trifásicos 350kW y zona para rodaje car-to-car.',
+      markers: [
+        {
+          name: 'Pabellón Industrial & Pista Los Álamos',
+          category: 'Circuito Privado',
+          lat: 19.1910,
+          lng: -100.1280,
+          address: 'Carretera Colorines km 12, Valle de Bravo, EdoMex',
+          logisticsNote: 'Pista asfaltada cerrada • Recta de 800m • Área para 8 trailers'
+        },
+        {
+          name: 'Túnel Brutalista Santa Fe',
+          category: 'Túnel Subterráneo',
+          lat: 19.3620,
+          lng: -99.2610,
+          address: 'Paseo de los Arquitectos #100, Santa Fe, CDMX',
+          logisticsNote: 'Luces continuas LED • Ideal tomas de persecución nocturna'
+        }
+      ]
+    }
   };
 
   constructor(private supabase: SupabaseService) {
@@ -612,6 +724,7 @@ export class ProjectsService {
           accessCode: data.access_code,
           createdAt: data.created_at,
           updatedAt: data.updated_at,
+          mapConfig: this.p1.mapConfig,
           locations: this.p1.locations
         };
         this.currentProject.set(remoteProj);
@@ -627,8 +740,32 @@ export class ProjectsService {
     return null;
   }
 
-  // Crear nuevo proyecto desde panel de administración
-  async createProject(title: string, accessCode: string, description?: string): Promise<Project> {
+  // Crear nuevo proyecto desde panel de administración con mapa configurable
+  async createProject(
+    title: string, 
+    accessCode: string, 
+    description?: string, 
+    mapConfig?: ProjectMapConfig
+  ): Promise<Project> {
+    const defaultMap: ProjectMapConfig = mapConfig || {
+      regionName: 'Ciudad de México • Zona Metropolitana',
+      centerLat: 19.4326,
+      centerLng: -99.1332,
+      zoom: 12,
+      mapStyle: 'cinematic',
+      logisticsNotes: 'Acceso vial principal con autorización municipal y espacio para unidad móvil técnica.',
+      markers: [
+        {
+          name: 'Espacio Principal a Documentar',
+          category: 'Locación Principal',
+          lat: 19.4326,
+          lng: -99.1332,
+          address: 'Zona Centro / Poniente',
+          logisticsNote: 'Acceso para camiones de rodaje 10T y acometida técnica'
+        }
+      ]
+    };
+
     const newProj: Project = {
       id: 'proj-' + Date.now(),
       title,
@@ -639,6 +776,7 @@ export class ProjectsService {
       accessCode: accessCode.toUpperCase(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      mapConfig: defaultMap,
       locations: [
         {
           id: 'loc-' + Date.now(),
@@ -654,5 +792,21 @@ export class ProjectsService {
 
     this.allProjects.update(list => [newProj, ...list]);
     return newProj;
+  }
+
+  // Actualizar la configuración del mapa del proyecto
+  updateProjectMapConfig(projectId: string, mapConfig: ProjectMapConfig): boolean {
+    let updated = false;
+    this.allProjects.update(list => list.map(p => {
+      if (p.id === projectId) {
+        updated = true;
+        return { ...p, mapConfig };
+      }
+      return p;
+    }));
+    if (this.currentProject()?.id === projectId) {
+      this.currentProject.update(cp => cp ? { ...cp, mapConfig } : cp);
+    }
+    return updated;
   }
 }

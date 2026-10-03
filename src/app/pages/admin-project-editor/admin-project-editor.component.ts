@@ -5,6 +5,7 @@ import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { ProjectsService } from '../../services/projects.service';
 import { FavoritesService } from '../../services/favorites.service';
 import { AdminAuthService } from '../../services/admin-auth.service';
+import { ProjectMapConfig } from '../../models/project.model';
 import { PfeFooterComponent } from '../../components/pfe-footer/pfe-footer.component';
 import { PfeLogoComponent } from '../../components/pfe-logo/pfe-logo.component';
 
@@ -15,6 +16,7 @@ interface EditableMedia {
   specs: string;
   isCover: boolean;
   type: 'image' | 'video';
+  description?: string;
 }
 
 @Component({
@@ -74,6 +76,11 @@ interface EditableMedia {
             <button (click)="copyClientLink()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/10 hover:bg-secondary/20 text-secondary font-bold text-xs transition-colors shadow-xs cursor-pointer" title="Copiar enlace directo con código para cliente">
               <span class="material-symbols-outlined text-[16px]">link</span>
               <span>Copiar Link Cliente</span>
+            </button>
+
+            <button (click)="openMapConfigModal()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors text-xs font-semibold shadow-xs cursor-pointer" title="Configurar mapa y logística">
+              <span class="material-symbols-outlined text-[16px] text-secondary">explore</span>
+              <span>Mapa</span>
             </button>
 
             <a [routerLink]="'/p/' + (project()?.id || '10000000-0000-4000-8000-000000000001')" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors text-xs font-semibold shadow-xs">
@@ -255,7 +262,10 @@ interface EditableMedia {
                     }
 
                     <!-- Top right actions -->
-                    <div class="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm p-1 rounded-lg">
+                    <div class="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 backdrop-blur-sm p-1 rounded-lg">
+                      <button (click)="openEditMediaModal(item)" class="text-white hover:text-amber-400 transition-colors p-1" title="Editar Título y Descripción para el Cliente">
+                        <span class="material-symbols-outlined text-[16px]">edit</span>
+                      </button>
                       <button (click)="setAsCover(item.id)" class="text-white hover:text-primary transition-colors p-1" title="Definir como Portada">
                         <span class="material-symbols-outlined text-[16px]">bookmark</span>
                       </button>
@@ -265,12 +275,23 @@ interface EditableMedia {
                     </div>
                   </div>
 
-                  <div class="p-3 flex items-center justify-between text-xs">
-                    <div class="flex flex-col truncate pr-2">
+                  <div class="p-3 flex flex-col gap-1 text-xs">
+                    <div class="flex items-center justify-between">
                       <span class="font-bold text-on-surface truncate">{{ item.title }}</span>
-                      <span class="text-[10px] text-on-surface-variant font-mono">{{ item.specs }}</span>
+                      <button (click)="openEditMediaModal(item)" class="text-primary hover:underline text-[11px] font-semibold flex items-center gap-0.5 cursor-pointer">
+                        <span class="material-symbols-outlined text-[13px]">edit_note</span>
+                        <span>Editar</span>
+                      </button>
                     </div>
-                    <span class="material-symbols-outlined text-on-surface-variant/40 cursor-grab" title="Arrastrar para ordenar">drag_indicator</span>
+                    @if (item.description) {
+                      <p class="text-[11px] text-on-surface-variant line-clamp-2 italic leading-relaxed">
+                        {{ item.description }}
+                      </p>
+                    }
+                    <div class="flex items-center justify-between text-[10px] text-on-surface-variant font-mono pt-1 border-t border-surface-container-high/60 mt-0.5">
+                      <span class="truncate">{{ item.specs }}</span>
+                      <span class="material-symbols-outlined text-on-surface-variant/40 cursor-grab shrink-0" title="Arrastrar para ordenar">drag_indicator</span>
+                    </div>
                   </div>
 
                 </div>
@@ -368,6 +389,198 @@ interface EditableMedia {
         </div>
       </main>
 
+      <!-- Modal Configurar Mapa de Producción del Proyecto -->
+      @if (isMapModalOpen()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in" (click)="closeMapConfigModal()">
+          <div class="bg-surface-container-lowest rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-surface-container-high flex flex-col gap-4 text-left max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
+            
+            <div class="flex items-start justify-between pb-3 border-b border-surface-container-high">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center border border-secondary/20">
+                  <span class="material-symbols-outlined text-[24px]">explore</span>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-secondary">
+                    Geolocalización & Logística • {{ project()?.title }}
+                  </span>
+                  <h3 class="font-extrabold text-base text-on-surface">Configurar Mapa del Proyecto</h3>
+                </div>
+              </div>
+              <button (click)="closeMapConfigModal()" class="w-8 h-8 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface flex items-center justify-center cursor-pointer transition-colors">
+                <span class="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+
+            <!-- Presets rápidos -->
+            <div>
+              <span class="block text-xs font-bold text-on-surface-variant mb-1.5">Cargar Preset Geográfico Rápido:</span>
+              <div class="flex flex-wrap gap-1.5">
+                <button type="button" (click)="applyMapPreset('cdmx-sur')" class="px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-[11px] font-bold text-on-surface border border-surface-container-high transition-colors">CDMX Sur / Pedregal</button>
+                <button type="button" (click)="applyMapPreset('oaxaca')" class="px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-[11px] font-bold text-on-surface border border-surface-container-high transition-colors">Oaxaca Costa</button>
+                <button type="button" (click)="applyMapPreset('polanco')" class="px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-[11px] font-bold text-on-surface border border-surface-container-high transition-colors">CDMX Polanco</button>
+                <button type="button" (click)="applyMapPreset('valle-bravo')" class="px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-[11px] font-bold text-on-surface border border-surface-container-high transition-colors">Valle de Bravo</button>
+                <button type="button" (click)="applyMapPreset('quito')" class="px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-[11px] font-bold text-on-surface border border-surface-container-high transition-colors">Quito Centro</button>
+                <button type="button" (click)="applyMapPreset('guayaquil')" class="px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-[11px] font-bold text-on-surface border border-surface-container-high transition-colors">Guayaquil Samborondón</button>
+              </div>
+            </div>
+
+            <form (ngSubmit)="saveMapConfig()" class="space-y-3 text-xs">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="sm:col-span-2">
+                  <label class="block font-bold text-on-surface mb-1">Nombre de la Región / Ciudad *</label>
+                  <input type="text" [(ngModel)]="editMapRegionName" name="editMapRegionName" required placeholder="Ej: Pedregal & San Ángel, CDMX" class="w-full h-9 px-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary font-semibold" />
+                </div>
+
+                <div>
+                  <label class="block font-bold text-on-surface mb-1">Latitud GPS (Centro) *</label>
+                  <input type="number" step="0.0001" [(ngModel)]="editMapLat" name="editMapLat" required class="w-full h-9 px-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary font-mono font-bold" />
+                </div>
+
+                <div>
+                  <label class="block font-bold text-on-surface mb-1">Longitud GPS (Centro) *</label>
+                  <input type="number" step="0.0001" [(ngModel)]="editMapLng" name="editMapLng" required class="w-full h-9 px-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary font-mono font-bold" />
+                </div>
+
+                <div>
+                  <label class="block font-bold text-on-surface mb-1">Zoom Inicial (10 - 18)</label>
+                  <input type="number" min="10" max="18" [(ngModel)]="editMapZoom" name="editMapZoom" class="w-full h-9 px-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary font-mono" />
+                </div>
+
+                <div>
+                  <label class="block font-bold text-on-surface mb-1">Estilo Visual del Mapa</label>
+                  <select [(ngModel)]="editMapStyle" name="editMapStyle" class="w-full h-9 px-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary">
+                    <option value="cinematic">Cinematográfico Dark (Recomendado)</option>
+                    <option value="satellite">Satelital Ultra HD</option>
+                    <option value="dark">Nocturno Minimalista (Dark)</option>
+                    <option value="streets">Calles & Rutas de Tránsito</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Puntos de Acceso / Marcador Principal -->
+              <div class="p-3 rounded-xl bg-surface-container-low border border-surface-container-high space-y-2.5">
+                <span class="block text-xs font-bold text-on-surface flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[16px] text-primary">pin_drop</span>
+                  Punto de Rodaje / Locación Principal
+                </span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-on-surface-variant mb-0.5">Nombre del Punto</label>
+                    <input type="text" [(ngModel)]="editMapFirstLocationName" name="editMapFirstLocationName" placeholder="Ej: Villa Pedregal Set A" class="w-full h-8 px-2 rounded-lg bg-surface-container-lowest text-on-surface border border-outline-variant text-xs" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-on-surface-variant mb-0.5">Dirección / Referencia</label>
+                    <input type="text" [(ngModel)]="editMapFirstLocationAddress" name="editMapFirstLocationAddress" placeholder="Ej: Av. de las Fuentes 240, CDMX" class="w-full h-8 px-2 rounded-lg bg-surface-container-lowest text-on-surface border border-outline-variant text-xs" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="block font-bold text-on-surface mb-1">Instrucciones Logísticas & Acceso (Vehículos pesados, acometida)</label>
+                <textarea [(ngModel)]="editMapLogisticsNotes" name="editMapLogisticsNotes" rows="2" placeholder="Acceso para camiones de 10T, estacionamiento para campers de producción, acometida trifásica 125A..." class="w-full p-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary text-xs"></textarea>
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-surface-container-high">
+                <a [href]="'https://www.google.com/maps/search/?api=1&query=' + editMapLat + ',' + editMapLng" target="_blank" class="text-primary hover:underline font-bold text-xs flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[15px]">open_in_new</span>
+                  <span>Probar en Google Maps</span>
+                </a>
+                <div class="flex items-center gap-2">
+                  <button type="button" (click)="closeMapConfigModal()" class="px-3 py-1.5 rounded-lg border border-surface-container-highest text-xs font-semibold hover:bg-surface-container cursor-pointer">
+                    Cancelar
+                  </button>
+                  <button type="submit" class="px-4 py-2 bg-primary text-on-primary font-bold rounded-lg shadow-sm hover:brightness-105 active:scale-98 transition-all flex items-center gap-1.5 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">save</span>
+                    <span>Guardar Mapa del Proyecto</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      }
+
+      <!-- Modal Editar Descripción & Metadatos del Activo (Visible para Clientes) -->
+      @if (isEditMediaModalOpen()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in" (click)="closeEditMediaModal()">
+          <div class="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-surface-container-high flex flex-col gap-4 text-left" (click)="$event.stopPropagation()">
+            
+            <div class="flex items-start justify-between pb-3 border-b border-surface-container-high">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center border border-primary/20">
+                  <span class="material-symbols-outlined text-[24px]">edit_note</span>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-secondary">
+                    Ficha del Activo • Visible para Clientes
+                  </span>
+                  <h3 class="font-extrabold text-base text-on-surface">Editar Descripción de la Imagen / Video</h3>
+                </div>
+              </div>
+              <button (click)="closeEditMediaModal()" class="w-8 h-8 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface flex items-center justify-center cursor-pointer transition-colors">
+                <span class="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+
+            <form (ngSubmit)="saveMediaDetails()" class="space-y-3.5 text-xs">
+              <div>
+                <label class="block font-bold text-on-surface mb-1">Título del Activo *</label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="editMediaTitle" 
+                  name="editMediaTitle" 
+                  required 
+                  class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary font-semibold text-sm" 
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-on-surface mb-1 flex items-center justify-between">
+                  <span>Descripción Artística / Técnica (Visible para el Cliente) *</span>
+                  <span class="text-[10px] text-secondary font-medium">Se muestra en galería y lightbox</span>
+                </label>
+                <textarea 
+                  [(ngModel)]="editMediaDescription" 
+                  name="editMediaDescription" 
+                  rows="4" 
+                  placeholder="Ej: Salón principal con piso de mármol negro y ventanal de doble altura. Orientación suroeste con luz dorada a partir de las 16:30 hrs. Apta para dolly y steadycam."
+                  class="w-full p-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary leading-relaxed text-xs"
+                ></textarea>
+              </div>
+
+              <div>
+                <label class="block font-bold text-on-surface mb-1">Especificaciones Técnicas (Lente / Resolución)</label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="editMediaSpecs" 
+                  name="editMediaSpecs" 
+                  placeholder="Ej: 4K WebP • 24mm • f/2.8 • 3840x2400"
+                  class="w-full h-9 px-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary font-mono" 
+                />
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-surface-container-high">
+                <span class="text-[11px] text-on-surface-variant flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[15px] text-emerald-500">visibility</span>
+                  <span>Visible de inmediato para el cliente</span>
+                </span>
+                <div class="flex items-center gap-2">
+                  <button type="button" (click)="closeEditMediaModal()" class="px-3.5 py-2 rounded-lg border border-surface-container-highest text-xs font-semibold hover:bg-surface-container cursor-pointer">
+                    Cancelar
+                  </button>
+                  <button type="submit" class="px-4 py-2 bg-primary text-on-primary font-bold rounded-lg shadow-sm hover:brightness-105 active:scale-98 transition-all flex items-center gap-1.5 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">check</span>
+                    <span>Guardar Descripción</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      }
+
       <!-- Professional Footer -->
       <app-pfe-footer></app-pfe-footer>
 
@@ -388,11 +601,11 @@ export class AdminProjectEditorComponent implements OnInit {
     const p = this.project();
     const id = p?.id || '10000000-0000-4000-8000-000000000001';
     const code = p?.accessCode || 'LOC-2026-X';
-    const link = `${window.location.origin}/p/${id}?code=${code}`;
+    const link = `${window.location.origin}/?project=${id}&code=${code}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(link);
     }
-    this.favoritesService.triggerToast(`Enlace directo con código para cliente copiado al portapapeles.`);
+    this.favoritesService.triggerToast(`Enlace de login con código (${code}) copiado.`);
   }
 
   public activeRevision = signal<number>(2);
@@ -503,7 +716,8 @@ export class AdminProjectEditorComponent implements OnInit {
                 url: m.url || '',
                 specs: `${m.width}x${m.height} • ${m.mime}`,
                 isCover: false,
-                type: m.type as 'image' | 'video'
+                type: m.type as 'image' | 'video',
+                description: m.description || m.alt || ''
               })));
             }
           }
@@ -539,7 +753,8 @@ export class AdminProjectEditorComponent implements OnInit {
         url: m.url || '',
         specs: `${m.width}x${m.height} • ${m.mime}`,
         isCover: false,
-        type: m.type as 'image' | 'video'
+        type: m.type as 'image' | 'video',
+        description: m.description || m.alt || ''
       })));
     }
   }
@@ -632,5 +847,189 @@ export class AdminProjectEditorComponent implements OnInit {
 
   notifyInfo(msg: string) {
     this.favoritesService.triggerToast(msg);
+  }
+
+  // --- Configuración Dinámica de Mapa del Proyecto ---
+  public isMapModalOpen = signal<boolean>(false);
+  public editMapRegionName: string = '';
+  public editMapLat: number = 19.3142;
+  public editMapLng: number = -99.2014;
+  public editMapZoom: number = 15;
+  public editMapStyle: 'satellite' | 'streets' | 'dark' | 'cinematic' = 'cinematic';
+  public editMapFirstLocationName: string = '';
+  public editMapFirstLocationAddress: string = '';
+  public editMapLogisticsNotes: string = '';
+
+  openMapConfigModal() {
+    const p = this.project();
+    const cfg = p?.mapConfig;
+    if (cfg) {
+      this.editMapRegionName = cfg.regionName;
+      this.editMapLat = cfg.centerLat;
+      this.editMapLng = cfg.centerLng;
+      this.editMapZoom = cfg.zoom;
+      this.editMapStyle = cfg.mapStyle;
+      this.editMapLogisticsNotes = cfg.logisticsNotes || '';
+      if (cfg.markers && cfg.markers.length > 0) {
+        this.editMapFirstLocationName = cfg.markers[0].name;
+        this.editMapFirstLocationAddress = cfg.markers[0].address || '';
+      } else {
+        this.editMapFirstLocationName = p?.title || '';
+        this.editMapFirstLocationAddress = '';
+      }
+    } else {
+      this.editMapRegionName = p?.title ? `${p.title} - Región Técnica` : 'Pedregal, CDMX';
+      this.editMapLat = 19.3142;
+      this.editMapLng = -99.2014;
+      this.editMapZoom = 15;
+      this.editMapStyle = 'satellite';
+      this.editMapFirstLocationName = 'Locación Principal Set A';
+      this.editMapFirstLocationAddress = '';
+      this.editMapLogisticsNotes = 'Acceso para camiones de rodaje 10T y acometida técnica.';
+    }
+    this.isMapModalOpen.set(true);
+  }
+
+  closeMapConfigModal() {
+    this.isMapModalOpen.set(false);
+  }
+
+  applyMapPreset(preset: string) {
+    if (preset === 'cdmx-sur') {
+      this.editMapRegionName = 'Pedregal & San Ángel, CDMX';
+      this.editMapLat = 19.3242;
+      this.editMapLng = -99.2014;
+      this.editMapZoom = 15;
+      this.editMapStyle = 'satellite';
+      this.editMapFirstLocationName = 'Villa Moderna Pedregal Set';
+      this.editMapFirstLocationAddress = 'Av. de las Fuentes 240, Álvaro Obregón, CDMX';
+      this.editMapLogisticsNotes = 'Acceso controlado para camiones 10T. Planta de luz trifásica 125A.';
+    } else if (preset === 'oaxaca') {
+      this.editMapRegionName = 'Costa Esmeralda & Puerto Escondido, Oaxaca';
+      this.editMapLat = 15.8722;
+      this.editMapLng = -97.0767;
+      this.editMapZoom = 14;
+      this.editMapStyle = 'satellite';
+      this.editMapFirstLocationName = 'Residencia Acantilado Costa';
+      this.editMapFirstLocationAddress = 'Carretera Costera Km 138, Oaxaca';
+      this.editMapLogisticsNotes = 'Camino de terracería compactada apto para unidades de 3.5T y 10T.';
+    } else if (preset === 'polanco') {
+      this.editMapRegionName = 'Polanco & Bosque de Chapultepec, CDMX';
+      this.editMapLat = 19.4326;
+      this.editMapLng = -99.1916;
+      this.editMapZoom = 16;
+      this.editMapStyle = 'dark';
+      this.editMapFirstLocationName = 'Penthouse & Galería Polanco';
+      this.editMapFirstLocationAddress = 'Campos Elíseos 204, Polanco, CDMX';
+      this.editMapLogisticsNotes = 'Elevador de carga con capacidad de 1,500 kg. Permiso filmación CDMX vigente.';
+    } else if (preset === 'valle-bravo') {
+      this.editMapRegionName = 'Circuito Avándaro & Valle de Bravo';
+      this.editMapLat = 19.1923;
+      this.editMapLng = -100.1317;
+      this.editMapZoom = 14;
+      this.editMapStyle = 'dark';
+      this.editMapFirstLocationName = 'Pista & Hangar Automotriz';
+      this.editMapFirstLocationAddress = 'Carretera Colorines Km 12, Edo. Mex.';
+      this.editMapLogisticsNotes = 'Pista cerrada de 2.8 km para rodajes de alta velocidad.';
+    } else if (preset === 'quito') {
+      this.editMapRegionName = 'Centro Histórico & Cumbayá, Quito';
+      this.editMapLat = -0.2201;
+      this.editMapLng = -78.5123;
+      this.editMapZoom = 15;
+      this.editMapStyle = 'satellite';
+      this.editMapFirstLocationName = 'Casona Patrimonial San Francisco';
+      this.editMapFirstLocationAddress = 'Calle Cuenca y Sucre, Centro Histórico, Quito';
+      this.editMapLogisticsNotes = 'Permisos de Instituto Metropolitano de Patrimonio en regla. Horario de carga nocturno.';
+    } else if (preset === 'guayaquil') {
+      this.editMapRegionName = 'Samborondón & Puerto Santa Ana, Guayaquil';
+      this.editMapLat = -2.1465;
+      this.editMapLng = -79.8706;
+      this.editMapZoom = 15;
+      this.editMapStyle = 'satellite';
+      this.editMapFirstLocationName = 'Plaza Fluvial & Helipuerto';
+      this.editMapFirstLocationAddress = 'Av. Samborondón Km 4.5, Guayas';
+      this.editMapLogisticsNotes = 'Muelle privado apto para barcos de cámara y grúas telescópicas.';
+    }
+    this.favoritesService.triggerToast(`Preset geográfico cargado.`);
+  }
+
+  saveMapConfig() {
+    const p = this.project();
+    if (!p) return;
+    const config: ProjectMapConfig = {
+      regionName: this.editMapRegionName || 'Región Técnica de Rodaje',
+      centerLat: Number(this.editMapLat) || 19.3142,
+      centerLng: Number(this.editMapLng) || -99.2014,
+      zoom: Number(this.editMapZoom) || 15,
+      mapStyle: this.editMapStyle,
+      logisticsNotes: this.editMapLogisticsNotes,
+      markers: [
+        {
+          name: this.editMapFirstLocationName || p.title,
+          lat: Number(this.editMapLat) || 19.3142,
+          lng: Number(this.editMapLng) || -99.2014,
+          address: this.editMapFirstLocationAddress || `${this.editMapRegionName}`,
+          category: 'Locación Principal',
+          logisticsNote: 'Acceso para camiones de rodaje 10T y acometida técnica'
+        }
+      ]
+    };
+
+    this.projectsService.updateProjectMapConfig(p.id, config);
+    this.isMapModalOpen.set(false);
+    this.favoritesService.triggerToast(`Mapa y logística del proyecto guardados exitosamente.`);
+  }
+
+  // --- Modal de Edición de Descripción y Metadatos de Activos ---
+  public isEditMediaModalOpen = signal<boolean>(false);
+  public editingMediaId = signal<string>('');
+  public editMediaTitle: string = '';
+  public editMediaDescription: string = '';
+  public editMediaSpecs: string = '';
+
+  openEditMediaModal(item: EditableMedia) {
+    this.editingMediaId.set(item.id);
+    this.editMediaTitle = item.title;
+    this.editMediaDescription = item.description || '';
+    this.editMediaSpecs = item.specs;
+    this.isEditMediaModalOpen.set(true);
+  }
+
+  closeEditMediaModal() {
+    this.isEditMediaModalOpen.set(false);
+  }
+
+  saveMediaDetails() {
+    const id = this.editingMediaId();
+    if (!id) return;
+
+    // 1. Actualizar señal local mediaItems
+    this.mediaItems.update(list => list.map(item => {
+      if (item.id === id) {
+        return {
+          ...item,
+          title: this.editMediaTitle,
+          description: this.editMediaDescription,
+          specs: this.editMediaSpecs
+        };
+      }
+      return item;
+    }));
+
+    // 2. Persistir en la locación y sección activa del proyecto
+    const p = this.project();
+    const loc = p?.locations?.find(l => l.id === this.activeLocId());
+    const sec = loc?.sections?.find(s => s.id === this.activeSectionId());
+    if (sec && sec.media) {
+      const targetMedia = sec.media.find(m => m.id === id);
+      if (targetMedia) {
+        targetMedia.title = this.editMediaTitle;
+        targetMedia.description = this.editMediaDescription;
+        targetMedia.alt = this.editMediaDescription;
+      }
+    }
+
+    this.isEditMediaModalOpen.set(false);
+    this.favoritesService.triggerToast(`Descripción y título actualizados para "${this.editMediaTitle}". Los clientes verán estos detalles en la galería.`);
   }
 }

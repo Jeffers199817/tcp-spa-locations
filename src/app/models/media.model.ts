@@ -7,6 +7,7 @@ export interface MediaItem {
   type: 'image' | 'video';
   title: string;
   alt?: string;
+  description?: string;
   mime: 'image/jpeg' | 'image/png' | 'image/webp' | 'video/mp4';
   bytes: number;
   width: number;

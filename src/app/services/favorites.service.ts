@@ -233,7 +233,7 @@ export class FavoritesService {
         generatedAt: '01 Oct 2026, 11:20 AM',
         expiresAt: '15 Oct 2026',
         clicksCount: 42,
-        fullUrl: `${window.location.origin}/p/10000000-0000-4000-8000-000000000001?code=LOC-2026-X&token=CLI-2026-NETFLIX-01&role=DP`
+        fullUrl: `${window.location.origin}/?project=10000000-0000-4000-8000-000000000001&code=LOC-2026-X&token=CLI-2026-NETFLIX-01&role=DP`
       },
       {
         token: 'CLI-8821-AMAZON-02',
@@ -245,7 +245,7 @@ export class FavoritesService {
         generatedAt: '02 Oct 2026, 16:45 PM',
         expiresAt: '20 Oct 2026',
         clicksCount: 28,
-        fullUrl: `${window.location.origin}/p/20000000-0000-4000-8000-000000000002?code=LOC-8821&token=CLI-8821-AMAZON-02&role=Arte`
+        fullUrl: `${window.location.origin}/?project=20000000-0000-4000-8000-000000000002&code=LOC-8821&token=CLI-8821-AMAZON-02&role=Arte`
       },
       {
         token: 'CLI-AUTO-BBDO-03',
@@ -257,7 +257,7 @@ export class FavoritesService {
         generatedAt: '03 Oct 2026, 08:10 AM',
         expiresAt: '30 Oct 2026',
         clicksCount: 64,
-        fullUrl: `${window.location.origin}/p/40000000-0000-4000-8000-000000000004?code=LOC-AUTO-99&token=CLI-AUTO-BBDO-03&role=Productor`
+        fullUrl: `${window.location.origin}/?project=40000000-0000-4000-8000-000000000004&code=LOC-AUTO-99&token=CLI-AUTO-BBDO-03&role=Productor`
       }
     ];
 
@@ -286,7 +286,7 @@ export class FavoritesService {
     const expDate = new Date();
     expDate.setDate(expDate.getDate() + (data.expiresInDays || 15));
 
-    const fullUrl = `${window.location.origin}/p/${data.projectId}?code=${data.accessCode}&token=${token}&role=${encodeURIComponent(data.role)}&client=${encodeURIComponent(data.clientName)}`;
+    const fullUrl = `${window.location.origin}/?project=${data.projectId}&code=${data.accessCode}&token=${token}&role=${encodeURIComponent(data.role)}&client=${encodeURIComponent(data.clientName)}`;
 
     const newToken: ClientSessionToken = {
       token,

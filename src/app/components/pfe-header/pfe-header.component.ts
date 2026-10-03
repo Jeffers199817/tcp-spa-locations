@@ -34,22 +34,38 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
 
             <!-- Dropdown projects menu -->
             @if (isProjectDropdownOpen()) {
-              <div class="absolute left-0 mt-2 w-72 bg-surface-container-lowest rounded-xl shadow-xl border border-surface-container-high py-2 z-50 animate-in fade-in zoom-in-95">
+              <div class="absolute left-0 mt-2 w-80 bg-surface-container-lowest rounded-xl shadow-xl border border-surface-container-high py-2 z-50 animate-in fade-in zoom-in-95">
                 <div class="px-3 py-1.5 border-b border-surface-container text-xs font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
-                  <span>Proyectos Activos ({{ allProjects().length }})</span>
-                  <span class="text-[10px] text-primary font-medium">Catálogo Privado</span>
+                  <span>Proyectos ({{ allProjects().length }})</span>
+                  <span class="text-[10px] text-primary font-medium">{{ isAdmin() ? 'Acceso Admin Total' : 'Acreditación Única' }}</span>
                 </div>
                 @for (proj of allProjects(); track proj.id) {
-                  <button (click)="selectProject(proj.id)" 
-                          class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-surface-container-low transition-colors cursor-pointer">
-                    <div class="flex flex-col truncate pr-2">
-                      <span class="font-semibold text-on-surface truncate">{{ proj.title }}</span>
-                      <span class="text-[10px] text-on-surface-variant">{{ proj.accessCode }} • v{{ proj.revision }}.0</span>
+                  @if (isAdmin() || proj.id === currentProjectId()) {
+                    <button (click)="selectProject(proj.id)" 
+                            class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-surface-container-low transition-colors cursor-pointer"
+                            [class.bg-surface-container-low]="proj.id === currentProjectId()">
+                      <div class="flex flex-col truncate pr-2">
+                        <span class="font-bold text-on-surface truncate">{{ proj.title }}</span>
+                        <span class="text-[10px] text-on-surface-variant">{{ proj.accessCode }} • v{{ proj.revision }}.0</span>
+                      </div>
+                      @if (proj.id === currentProjectId()) {
+                        <span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+                      }
+                    </button>
+                  } @else {
+                    <!-- Proyecto Bloqueado para el Cliente -->
+                    <div (click)="handleBlockedProjectClick(proj)"
+                         class="w-full text-left px-3 py-2 text-xs flex items-center justify-between opacity-55 bg-surface-container-low/40 border-b border-surface-container/40 cursor-not-allowed select-none group">
+                      <div class="flex flex-col truncate pr-2">
+                        <div class="flex items-center gap-1.5 text-on-surface-variant">
+                          <span class="material-symbols-outlined text-[15px] text-amber-500">lock</span>
+                          <span class="font-medium truncate">{{ proj.title }}</span>
+                        </div>
+                        <span class="text-[9px] text-amber-600 font-semibold pl-5">Bloqueado • Requiere código NDA</span>
+                      </div>
+                      <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 border border-amber-500/20">Restringido</span>
                     </div>
-                    @if (proj.id === currentProjectId()) {
-                      <span class="material-symbols-outlined text-primary text-[16px]">check</span>
-                    }
-                  </button>
+                  }
                 }
               </div>
             }
@@ -89,13 +105,15 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
         <!-- Right Controls & Status -->
         <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
           
-          <!-- Botón Rápido: Copiar Enlace Directo para Cliente con Código -->
-          <button (click)="copyClientShareLink()" 
-                  class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-colors cursor-pointer border border-primary/20"
-                  title="Copiar enlace con código integrado para compartir con clientes">
-            <span class="material-symbols-outlined text-[15px]">share</span>
-            <span>Compartir con Código</span>
-          </button>
+          <!-- Botón Rápido: Solo visible para Administrador autenticado -->
+          @if (isAdmin()) {
+            <button (click)="copyClientShareLink()" 
+                    class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-colors cursor-pointer border border-primary/20"
+                    title="Copiar enlace a la pantalla de login con código para clientes">
+              <span class="material-symbols-outlined text-[15px]">share</span>
+              <span>Generar Link Login</span>
+            </button>
+          }
 
           <!-- Sincronización en vivo -->
           <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-low text-on-surface shrink-0" 
@@ -163,10 +181,12 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
                 </div>
 
                 <div class="pt-2 border-t border-surface-container flex flex-col gap-1.5">
-                  <button (click)="copyClientShareLink()" class="text-xs text-secondary font-semibold hover:underline flex items-center gap-1 w-full text-left cursor-pointer">
-                    <span class="material-symbols-outlined text-[14px]">link</span>
-                    <span>Copiar Enlace con Código</span>
-                  </button>
+                  @if (isAdmin()) {
+                    <button (click)="copyClientShareLink()" class="text-xs text-secondary font-semibold hover:underline flex items-center gap-1 w-full text-left cursor-pointer">
+                      <span class="material-symbols-outlined text-[14px]">link</span>
+                      <span>Copiar Enlace con Código</span>
+                    </button>
+                  }
 
                   @if (isAdmin()) {
                     <button (click)="logoutAdmin()" class="text-xs text-error font-semibold hover:underline flex items-center gap-1 w-full text-left cursor-pointer">
@@ -189,34 +209,130 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
       </div>
     </header>
 
-    <!-- Modal Informativo de Mapa de Producción -->
+    <!-- Modal Interactivo de Mapa de Producción por Proyecto -->
     @if (isMapModalOpen()) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-        <div class="bg-surface-container-lowest rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-surface-container-high flex flex-col gap-4 text-left">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 text-secondary font-bold text-sm">
-              <span class="material-symbols-outlined text-[20px]">explore</span>
-              <span>Mapa Satelital de Locaciones Técnicas</span>
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in" (click)="isMapModalOpen.set(false)">
+        <div class="bg-surface-container-lowest rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-surface-container-high flex flex-col gap-4 text-left max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
+          
+          <!-- Header del Mapa Específico del Proyecto -->
+          <div class="flex items-start justify-between pb-3 border-b border-surface-container-high">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center border border-secondary/20">
+                <span class="material-symbols-outlined text-[24px]">explore</span>
+              </div>
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-secondary">
+                  Mapa Satelital de Producción • {{ currentProjectTitle() }}
+                </span>
+                <h3 class="font-extrabold text-base text-on-surface flex items-center gap-1.5 mt-0.5">
+                  <span>{{ projectMapConfig()?.regionName || 'Región Técnica de Rodaje' }}</span>
+                </h3>
+              </div>
             </div>
-            <button (click)="isMapModalOpen.set(false)" class="text-on-surface-variant hover:text-on-surface cursor-pointer">
-              <span class="material-symbols-outlined">close</span>
+            <button (click)="isMapModalOpen.set(false)" class="w-8 h-8 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface flex items-center justify-center cursor-pointer transition-colors">
+              <span class="material-symbols-outlined text-base">close</span>
             </button>
           </div>
-          <div class="h-56 bg-surface-container-low rounded-xl flex flex-col items-center justify-center p-4 text-center border border-dashed border-outline-variant relative overflow-hidden">
-            <span class="material-symbols-outlined text-4xl text-secondary mb-2 animate-bounce">location_on</span>
-            <h4 class="font-bold text-sm text-on-surface">Coordenadas y Logística de Rodaje</h4>
-            <p class="text-xs text-on-surface-variant mt-1 max-w-sm">
-              Visualización de radios de estacionamiento para camiones 10T, acometidas trifásicas y rutas de acceso para las 3 locaciones del proyecto.
-            </p>
-            <div class="mt-3 flex items-center gap-2 text-[11px] font-semibold text-tertiary bg-white px-3 py-1 rounded-full shadow-sm">
-              <span>📍 Pedregal (19.3242° N, 99.2014° W) • San Telmo • Coyoacán</span>
+
+          <!-- Contenedor del Mapa Visual e Interactivo del Proyecto -->
+          <div class="relative w-full h-64 sm:h-72 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 shadow-inner flex flex-col justify-between p-4 group">
+            
+            <!-- Fondo Satelital / Radar Cinematográfico con Grid Dinámico -->
+            <div class="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent pointer-events-none"></div>
+
+            <!-- Top Overlay: GPS Info & Style Tag -->
+            <div class="relative z-10 flex items-center justify-between text-xs text-white">
+              <div class="flex items-center gap-2 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/15">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="font-mono text-[11px] font-bold">
+                  {{ projectMapConfig()?.centerLat || 19.3242 }}° N, {{ projectMapConfig()?.centerLng || -99.2014 }}° W
+                </span>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full bg-primary/80 backdrop-blur-md text-white font-mono text-[10px] uppercase font-bold">
+                Modo: {{ projectMapConfig()?.mapStyle || 'cinematic' }}
+              </span>
+            </div>
+
+            <!-- Visual Markers Pins on Canvas -->
+            <div class="relative z-10 flex flex-wrap items-center justify-center gap-4 sm:gap-8 my-auto">
+              @for (marker of projectMapConfig()?.markers || []; track marker.name; let mIdx = $index) {
+                <div class="flex flex-col items-center gap-1 group/pin cursor-pointer transition-transform hover:scale-110">
+                  <div class="relative flex items-center justify-center">
+                    <span class="absolute w-8 h-8 rounded-full bg-primary/30 animate-ping"></span>
+                    <div class="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-lg border-2 border-white text-xs font-bold">
+                      <span class="material-symbols-outlined text-[18px]">location_on</span>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded bg-black/80 backdrop-blur-md text-white text-[10px] font-bold border border-white/20 whitespace-nowrap shadow-md">
+                    {{ marker.name }}
+                  </span>
+                </div>
+              }
+            </div>
+
+            <!-- Bottom Map Bar -->
+            <div class="relative z-10 flex items-center justify-between text-white text-[11px] bg-black/70 backdrop-blur-md p-2 rounded-lg border border-white/10">
+              <span class="font-medium text-white/80">Radio de giro camiones 10T & acometida técnica OK</span>
+              <a [href]="getGoogleMapsUrl()" target="_blank" class="text-primary hover:underline font-bold flex items-center gap-1">
+                <span>Abrir en Google Maps</span>
+                <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+              </a>
             </div>
           </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <button (click)="isMapModalOpen.set(false)" class="px-4 py-2 rounded-lg bg-primary text-on-primary font-semibold text-xs shadow-sm hover:brightness-105 cursor-pointer">
-              Entendido
+
+          <!-- Desglose de Marcadores y Especificaciones de Acceso de las Locaciones de Este Proyecto -->
+          <div class="space-y-2">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant block">
+              Locaciones & Puntos de Acceso Registrados para este Proyecto ({{ projectMapConfig()?.markers?.length || 0 }}):
+            </span>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              @for (m of projectMapConfig()?.markers || []; track m.name) {
+                <div class="p-3 rounded-xl bg-surface-container-low border border-surface-container-high flex flex-col justify-between gap-1 text-xs">
+                  <div>
+                    <div class="flex items-center justify-between mb-0.5">
+                      <span class="font-bold text-on-surface text-xs">{{ m.name }}</span>
+                      <span class="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant">
+                        {{ m.category || 'Locación' }}
+                      </span>
+                    </div>
+                    @if (m.address) {
+                      <p class="text-[11px] text-on-surface-variant flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[13px] text-secondary">pin_drop</span>
+                        <span class="truncate">{{ m.address }}</span>
+                      </p>
+                    }
+                  </div>
+                  <div class="pt-1.5 border-t border-surface-container-high text-[10px] text-tertiary font-medium">
+                    {{ m.logisticsNote || 'Acceso para camiones de rodaje 10T' }}
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Logística de Rodaje & Permisos Específicos del Proyecto -->
+          @if (projectMapConfig()?.logisticsNotes) {
+            <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-on-surface flex items-start gap-2.5">
+              <span class="material-symbols-outlined text-amber-600 text-[18px] shrink-0 mt-0.5">local_shipping</span>
+              <div>
+                <strong class="font-bold text-amber-900 block text-[11px] uppercase tracking-wider">Logística de Acceso & Estacionamiento:</strong>
+                <p class="text-on-surface-variant text-xs mt-0.5 leading-relaxed">{{ projectMapConfig()?.logisticsNotes }}</p>
+              </div>
+            </div>
+          }
+
+          <!-- Footer Actions -->
+          <div class="flex items-center justify-between pt-2 border-t border-surface-container-high">
+            <span class="text-xs text-on-surface-variant">
+              Coordenadas validadas para scouting técnico.
+            </span>
+            <button (click)="isMapModalOpen.set(false)" class="px-4 py-2 rounded-lg bg-primary text-on-primary font-bold text-xs shadow-sm hover:brightness-105 cursor-pointer">
+              Cerrar Mapa
             </button>
           </div>
+
         </div>
       </div>
     }
@@ -274,6 +390,15 @@ export class PfeHeaderComponent {
   public isMapModalOpen = signal<boolean>(false);
   public isDossierModalOpen = signal<boolean>(false);
 
+  public projectMapConfig = computed(() => this.currentProject()?.mapConfig);
+
+  getGoogleMapsUrl(): string {
+    const cfg = this.projectMapConfig();
+    const lat = cfg?.centerLat || 19.3242;
+    const lng = cfg?.centerLng || -99.2014;
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
+
   public isClientView = computed(() => {
     return !this.router.url.startsWith('/admin');
   });
@@ -296,11 +421,11 @@ export class PfeHeaderComponent {
   copyClientShareLink() {
     const proj = this.currentProject();
     const code = proj?.accessCode || 'LOC-2026-X';
-    const link = `${window.location.origin}/p/${this.currentProjectId()}?code=${code}`;
+    const link = `${window.location.origin}/?project=${this.currentProjectId()}&code=${code}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(link);
     }
-    this.favoritesService.triggerToast(`Enlace directo con código (${code}) copiado al portapapeles.`);
+    this.favoritesService.triggerToast(`Enlace de login con código (${code}) copiado.`);
     this.isProfileMenuOpen.set(false);
   }
 
@@ -316,12 +441,24 @@ export class PfeHeaderComponent {
     this.isProfileMenuOpen.set(false);
     try {
       sessionStorage.removeItem('pfe_client_auth_code');
+      sessionStorage.removeItem('pfe_client_authorized_project_id');
     } catch {}
     this.favoritesService.triggerToast('Sesión de proyecto cerrada.');
     this.router.navigate(['/']);
   }
 
+  handleBlockedProjectClick(proj: any) {
+    this.favoritesService.triggerToast(`Acceso bloqueado: Tu acreditación solo te permite ver "${this.currentProjectTitle()}". Para "${proj?.title || 'este proyecto'}" se requiere un enlace y código de acreditación independiente.`, 'warning');
+  }
+
   selectProject(projectId: string) {
+    if (!this.isAdmin()) {
+      if (projectId !== this.currentProjectId()) {
+        const p = this.allProjects().find(x => x.id === projectId);
+        this.handleBlockedProjectClick(p || null);
+        return;
+      }
+    }
     this.projectsService.selectProjectById(projectId);
     this.isProjectDropdownOpen.set(false);
     this.router.navigate(['/p', projectId]);

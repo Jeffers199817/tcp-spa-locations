@@ -8,6 +8,7 @@ import { MediaItem } from '../../models/media.model';
 import { Location } from '../../models/location.model';
 import { PfeHeaderComponent } from '../../components/pfe-header/pfe-header.component';
 import { PfeFooterComponent } from '../../components/pfe-footer/pfe-footer.component';
+import { AdminAuthService } from '../../services/admin-auth.service';
 
 interface LightboxItem {
   id: string;
@@ -17,6 +18,7 @@ interface LightboxItem {
   specs: string;
   url: string;
   isVideo?: boolean;
+  description?: string;
 }
 
 @Component({
@@ -79,10 +81,12 @@ interface LightboxItem {
                 <span class="text-on-surface-variant font-medium">Sesión Autorizada:</span>
                 <strong class="font-mono text-primary font-bold text-xs">{{ currentCode() }}</strong>
               </div>
-              <button (click)="copyDirectLink()" class="flex items-center gap-2 bg-surface-container-lowest px-4 py-2.5 rounded-lg shadow-sm text-on-surface font-label-lg text-xs font-bold hover:bg-surface-container transition-colors cursor-pointer border border-surface-container-high" type="button" title="Copiar enlace con código directo para compartir con tu equipo">
-                <span class="material-symbols-outlined text-[18px] text-primary">link</span>
-                <span>Copiar Enlace con Código</span>
-              </button>
+              @if (isAdmin()) {
+                <button (click)="copyDirectLink()" class="flex items-center gap-2 bg-surface-container-lowest px-4 py-2.5 rounded-lg shadow-sm text-on-surface font-label-lg text-xs font-bold hover:bg-surface-container transition-colors cursor-pointer border border-surface-container-high" type="button" title="Copiar enlace con código directo para compartir con tu equipo">
+                  <span class="material-symbols-outlined text-[18px] text-primary">link</span>
+                  <span>Generar Link Login</span>
+                </button>
+              }
               <button (click)="openDossier()" class="flex items-center gap-2 bg-surface-container-lowest px-4 py-2.5 rounded-lg shadow-sm text-on-surface font-label-lg text-xs font-semibold hover:bg-surface-container transition-colors cursor-pointer border border-surface-container-high" type="button">
                 <span class="material-symbols-outlined text-[18px]">download</span>
                 <span>Exportar Dossier PDF</span>
@@ -288,6 +292,11 @@ interface LightboxItem {
                               <span class="font-label-md text-label-md text-primary font-semibold text-xs">{{ item.mime.includes('video') ? 'Video' : '4K' }}</span>
                             </div>
                           </div>
+                          @if (item.description || item.alt) {
+                            <p class="text-[11px] text-on-surface-variant line-clamp-2 leading-relaxed mt-0.5">
+                              {{ item.description || item.alt }}
+                            </p>
+                          }
                           <div class="flex flex-wrap items-center gap-1.5 font-label-md text-label-md text-on-surface-variant text-[11px] mt-1">
                             <span class="px-1.5 py-0.5 rounded bg-surface-container">{{ item.width }}x{{ item.height }}</span>
                             <span class="px-1.5 py-0.5 rounded bg-surface-container text-emerald-700 font-semibold">Direct Sound OK</span>
@@ -328,6 +337,11 @@ interface LightboxItem {
               <span class="text-[11px] text-white/80 font-mono">{{ currentLightboxIndex() + 1 }} de {{ allGalleryItems().length }}</span>
             </div>
             <h3 class="text-base sm:text-lg font-bold text-white mt-0.5 truncate max-w-md sm:max-w-xl">{{ currentLightbox()?.title }}</h3>
+            @if (currentLightbox()?.description) {
+              <p class="text-xs text-white/80 line-clamp-1 max-w-md sm:max-w-xl italic mt-0.5">
+                {{ currentLightbox()?.description }}
+              </p>
+            }
           </div>
 
           <div class="flex items-center gap-2 sm:gap-2.5">
@@ -452,20 +466,28 @@ interface LightboxItem {
 
         <!-- Bottom Technical Specifications Ribbon with DP Note display & button -->
         <div class="bg-[#0c0c0e]/95 backdrop-blur-xl rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 max-w-5xl mx-auto w-full text-white text-xs font-medium border border-white/20 z-20 shadow-2xl">
-          <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-left">
-            <span class="flex items-center gap-1.5 text-white/90">
-              <span class="material-symbols-outlined text-[16px] text-amber-400 shrink-0">wb_sunny</span>
-              <span class="line-clamp-1">{{ currentLightbox()?.specs }}</span>
-            </span>
+          <div class="flex flex-col gap-1 text-left">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <span class="flex items-center gap-1.5 text-white/90">
+                <span class="material-symbols-outlined text-[16px] text-amber-400 shrink-0">wb_sunny</span>
+                <span class="line-clamp-1">{{ currentLightbox()?.specs }}</span>
+              </span>
 
-            @if (currentNote()) {
-              <div class="flex items-center gap-2 bg-amber-500/20 border border-amber-500/40 px-3 py-1 rounded-lg text-amber-200 text-xs">
-                <span class="material-symbols-outlined text-[16px] text-amber-400 shrink-0">rate_review</span>
-                <div class="flex items-center gap-1.5 truncate max-w-xs sm:max-w-md">
-                  <strong class="text-amber-300 font-bold shrink-0">DP ({{ currentNote()?.category }}):</strong>
-                  <span class="truncate italic text-white/90">"{{ currentNote()?.noteText }}"</span>
+              @if (currentNote()) {
+                <div class="flex items-center gap-2 bg-amber-500/20 border border-amber-500/40 px-3 py-1 rounded-lg text-amber-200 text-xs">
+                  <span class="material-symbols-outlined text-[16px] text-amber-400 shrink-0">rate_review</span>
+                  <div class="flex items-center gap-1.5 truncate max-w-xs sm:max-w-md">
+                    <strong class="text-amber-300 font-bold shrink-0">DP ({{ currentNote()?.category }}):</strong>
+                    <span class="truncate italic text-white/90">"{{ currentNote()?.noteText }}"</span>
+                  </div>
                 </div>
-              </div>
+              }
+            </div>
+
+            @if (currentLightbox()?.description) {
+              <p class="text-[11px] text-white/70 italic line-clamp-2 max-w-3xl border-t border-white/10 pt-1 mt-0.5">
+                <strong class="text-white/90 not-italic font-semibold">Descripción del espacio:</strong> {{ currentLightbox()?.description }}
+              </p>
             }
           </div>
 
@@ -658,6 +680,7 @@ interface LightboxItem {
 export class ProjectViewComponent implements OnInit {
   private projectsService = inject(ProjectsService);
   private favoritesService = inject(FavoritesService);
+  private adminAuth = inject(AdminAuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
@@ -665,6 +688,7 @@ export class ProjectViewComponent implements OnInit {
   public favCount = computed(() => this.favoritesService.count());
   public lastToast = computed(() => this.favoritesService.lastToast());
   public currentCode = computed(() => this.project()?.accessCode || 'LOC-2026-X');
+  public isAdmin = computed(() => this.adminAuth.isAuthenticated());
 
   public density = signal<'large' | 'comfortable'>('large');
   public currentLightbox = signal<LightboxItem | null>(null);
@@ -686,7 +710,8 @@ export class ProjectViewComponent implements OnInit {
           locationName: loc.title,
           subSection: 'Portada Maestra',
           specs: loc.description,
-          url: loc.coverUrl
+          url: loc.coverUrl,
+          description: loc.description || ''
         });
       }
       for (const sec of loc.sections || []) {
@@ -698,7 +723,8 @@ export class ProjectViewComponent implements OnInit {
             subSection: sec.title,
             specs: `${sec.title} • Resolución: ${med.width}x${med.height} • ${med.mime} • ${sec.description || 'Luz natural'}`,
             url: med.url || '',
-            isVideo: med.type === 'video'
+            isVideo: med.type === 'video',
+            description: med.description || med.alt || ''
           });
         }
       }
@@ -1010,12 +1036,14 @@ export class ProjectViewComponent implements OnInit {
   }
 
   copyDirectLink() {
+    const p = this.project();
+    const id = p?.id || '10000000-0000-4000-8000-000000000001';
     const code = this.currentCode();
-    const link = `${window.location.origin}/p/${this.project()?.id || '10000000-0000-4000-8000-000000000001'}?code=${code}`;
+    const link = `${window.location.origin}/?project=${id}&code=${code}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(link);
     }
-    this.favoritesService.triggerToast(`Enlace directo copiado: ${link}`);
+    this.favoritesService.triggerToast(`Enlace de login con código (${code}) copiado.`);
   }
 
   goToFavorites() {

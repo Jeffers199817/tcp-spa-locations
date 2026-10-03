@@ -5,7 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { ProjectsService } from '../../services/projects.service';
 import { FavoritesService, DpNote, ClientSessionToken } from '../../services/favorites.service';
 import { AdminAuthService } from '../../services/admin-auth.service';
-import { Project } from '../../models/project.model';
+import { Project, ProjectMapConfig } from '../../models/project.model';
 import { PfeFooterComponent } from '../../components/pfe-footer/pfe-footer.component';
 import { PfeLogoComponent } from '../../components/pfe-logo/pfe-logo.component';
 
@@ -785,75 +785,310 @@ export interface AssetMetricRow {
 
       </div>
 
-      <!-- MODAL CREAR NUEVO PROYECTO -->
+      <!-- MODAL CREAR NUEVO PROYECTO CON CONFIGURACIÓN DE MAPA POR PROYECTO -->
       @if (showCreateModal()) {
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div class="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-surface-container-high flex flex-col gap-4 text-left">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in" (click)="closeCreateModal()">
+          <div class="bg-surface-container-lowest rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-surface-container-high flex flex-col gap-4 text-left max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
             
-            <div class="flex items-center justify-between pb-2 border-b border-surface-container">
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-[24px]">create_new_folder</span>
-                <h3 class="font-headline-sm text-lg font-bold text-on-surface">Crear Nuevo Proyecto de Locaciones</h3>
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-surface-container">
+              <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[24px]">create_new_folder</span>
+                </div>
+                <div>
+                  <h3 class="font-bold text-base text-on-surface">Crear Nuevo Proyecto de Locaciones</h3>
+                  <span class="text-xs text-on-surface-variant">Configura la ficha técnica y el mapa geográfico exclusivo para este proyecto</span>
+                </div>
               </div>
-              <button (click)="closeCreateModal()" class="text-on-surface-variant hover:text-on-surface cursor-pointer">
+              <button (click)="closeCreateModal()" class="text-on-surface-variant hover:text-on-surface cursor-pointer p-1 rounded-lg">
                 <span class="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <div class="space-y-3 text-xs">
-              <div>
-                <label class="block font-bold text-on-surface mb-1">Nombre del Proyecto *</label>
-                <input 
-                  type="text" 
-                  [(ngModel)]="newProjectTitle" 
-                  placeholder="Ej: Comercial Bebida Energética Q4" 
-                  class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
-                />
-              </div>
+            <!-- Tab Switcher (Datos Generales vs Mapa del Proyecto) -->
+            <div class="flex items-center gap-2 p-1 bg-surface-container-low rounded-xl text-xs font-bold border border-surface-container-high">
+              <button type="button" 
+                      (click)="createModalTab.set('general')"
+                      class="flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      [class.bg-surface-container-lowest]="createModalTab() === 'general'"
+                      [class.text-on-surface]="createModalTab() === 'general'"
+                      [class.shadow-xs]="createModalTab() === 'general'"
+                      [class.text-on-surface-variant]="createModalTab() !== 'general'">
+                <span class="material-symbols-outlined text-[16px]">folder</span>
+                <span>1. Ficha del Proyecto</span>
+              </button>
+              <button type="button" 
+                      (click)="createModalTab.set('map')"
+                      class="flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      [class.bg-surface-container-lowest]="createModalTab() === 'map'"
+                      [class.text-on-surface]="createModalTab() === 'map'"
+                      [class.shadow-xs]="createModalTab() === 'map'"
+                      [class.text-on-surface-variant]="createModalTab() !== 'map'">
+                <span class="material-symbols-outlined text-[16px] text-secondary">explore</span>
+                <span>2. Mapa & Logística de Rodaje</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+              </button>
+            </div>
 
-              <div>
-                <label class="block font-bold text-on-surface mb-1">Código de Acceso Privado (NDA) *</label>
-                <div class="flex gap-2">
+            <!-- TAB 1: FICHA GENERAL DEL PROYECTO -->
+            @if (createModalTab() === 'general') {
+              <div class="space-y-3.5 text-xs">
+                <div>
+                  <label class="block font-bold text-on-surface mb-1">Nombre del Proyecto *</label>
                   <input 
                     type="text" 
-                    [(ngModel)]="newProjectCode" 
-                    placeholder="LOC-XXXX" 
-                    class="w-full h-10 px-3 uppercase font-mono tracking-wider rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
+                    [(ngModel)]="newProjectTitle" 
+                    placeholder="Ej: Comercial Bebida Energética Q4 • Serie Streaming" 
+                    class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
                   />
-                  <button (click)="generateRandomCode()" class="px-3 bg-surface-container-high hover:bg-surface-container text-on-surface rounded-lg font-semibold whitespace-nowrap cursor-pointer">
-                    Generar
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block font-bold text-on-surface mb-1">Código de Acceso Privado (NDA) *</label>
+                    <div class="flex gap-2">
+                      <input 
+                        type="text" 
+                        [(ngModel)]="newProjectCode" 
+                        placeholder="LOC-XXXX" 
+                        class="w-full h-10 px-3 uppercase font-mono tracking-wider rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
+                      />
+                      <button type="button" (click)="generateRandomCode()" class="px-3 bg-surface-container-high hover:bg-surface-container text-on-surface rounded-lg font-semibold whitespace-nowrap cursor-pointer">
+                        Generar
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-on-surface mb-1">Director de Arte / Productor Asignado</label>
+                    <input 
+                      type="text" 
+                      [(ngModel)]="newProjectLead" 
+                      placeholder="Ej: Mateo Valenzuela / Laura Morales" 
+                      class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block font-bold text-on-surface mb-1">Descripción / Ficha de Rodaje</label>
+                  <textarea 
+                    [(ngModel)]="newProjectDescription" 
+                    rows="3" 
+                    placeholder="Detalla los requerimientos técnicos, fechas estimadas de shooting y perfil de recintos buscados..." 
+                    class="w-full p-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary leading-relaxed"
+                  ></textarea>
+                </div>
+
+                <div class="p-3 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-secondary text-[20px]">explore</span>
+                    <span class="text-xs text-on-surface font-semibold">Mapa preconfigurado: <strong>{{ newMapRegionName }}</strong></span>
+                  </div>
+                  <button type="button" (click)="createModalTab.set('map')" class="text-xs font-bold text-secondary hover:underline cursor-pointer">
+                    Personalizar Mapa →
                   </button>
                 </div>
               </div>
+            }
 
+            <!-- TAB 2: CONFIGURACIÓN DEDICADA DEL MAPA POR PROYECTO -->
+            @if (createModalTab() === 'map') {
+              <div class="space-y-4 text-xs">
+                
+                <!-- Presets Rápidos de Región -->
+                <div>
+                  <label class="block font-bold text-on-surface mb-1.5 uppercase text-[10px] tracking-wider text-on-surface-variant">
+                    Seleccionar Preset Geográfico o Personalizar:
+                  </label>
+                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    <button type="button" (click)="applyMapPreset('cdmx_sur')" 
+                            class="p-2 rounded-lg border text-left cursor-pointer transition-all"
+                            [class.border-primary]="newMapPreset === 'cdmx_sur'"
+                            [class.bg-primary/10]="newMapPreset === 'cdmx_sur'">
+                      <strong class="block text-[11px] text-on-surface">CDMX Sur</strong>
+                      <span class="text-[10px] text-on-surface-variant">Pedregal / Coyoacán</span>
+                    </button>
+                    <button type="button" (click)="applyMapPreset('oaxaca_costa')" 
+                            class="p-2 rounded-lg border text-left cursor-pointer transition-all"
+                            [class.border-primary]="newMapPreset === 'oaxaca_costa'"
+                            [class.bg-primary/10]="newMapPreset === 'oaxaca_costa'">
+                      <strong class="block text-[11px] text-on-surface">Oaxaca Costa</strong>
+                      <span class="text-[10px] text-on-surface-variant">Zicatela / Mazunte</span>
+                    </button>
+                    <button type="button" (click)="applyMapPreset('valle_bravo')" 
+                            class="p-2 rounded-lg border text-left cursor-pointer transition-all"
+                            [class.border-primary]="newMapPreset === 'valle_bravo'"
+                            [class.bg-primary/10]="newMapPreset === 'valle_bravo'">
+                      <strong class="block text-[11px] text-on-surface">Valle de Bravo</strong>
+                      <span class="text-[10px] text-on-surface-variant">Pistas & Bosque</span>
+                    </button>
+                    <button type="button" (click)="applyMapPreset('polanco')" 
+                            class="p-2 rounded-lg border text-left cursor-pointer transition-all"
+                            [class.border-primary]="newMapPreset === 'polanco'"
+                            [class.bg-primary/10]="newMapPreset === 'polanco'">
+                      <strong class="block text-[11px] text-on-surface">CDMX Polanco</strong>
+                      <span class="text-[10px] text-on-surface-variant">Mansiones & Reforma</span>
+                    </button>
+                    <button type="button" (click)="applyMapPreset('quito_cumbaya')" 
+                            class="p-2 rounded-lg border text-left cursor-pointer transition-all"
+                            [class.border-primary]="newMapPreset === 'quito_cumbaya'"
+                            [class.bg-primary/10]="newMapPreset === 'quito_cumbaya'">
+                      <strong class="block text-[11px] text-on-surface">Quito (Ecuador)</strong>
+                      <span class="text-[10px] text-on-surface-variant">Cumbayá / Colonial</span>
+                    </button>
+                    <button type="button" (click)="applyMapPreset('guayaquil_costa')" 
+                            class="p-2 rounded-lg border text-left cursor-pointer transition-all"
+                            [class.border-primary]="newMapPreset === 'guayaquil_costa'"
+                            [class.bg-primary/10]="newMapPreset === 'guayaquil_costa'">
+                      <strong class="block text-[11px] text-on-surface">Guayaquil (Ec)</strong>
+                      <span class="text-[10px] text-on-surface-variant">Samborondón / Río</span>
+                    </button>
+                    <button type="button" (click)="applyMapPreset('medellin')" 
+                            class="p-2 rounded-lg border text-left cursor-pointer transition-all"
+                            [class.border-primary]="newMapPreset === 'medellin'"
+                            [class.bg-primary/10]="newMapPreset === 'medellin'">
+                      <strong class="block text-[11px] text-on-surface">Medellín (Col)</strong>
+                      <span class="text-[10px] text-on-surface-variant">El Poblado / Oriente</span>
+                    </button>
+                    <button type="button" (click)="newMapPreset = 'custom'" 
+                            class="p-2 rounded-lg border text-left cursor-pointer transition-all"
+                            [class.border-primary]="newMapPreset === 'custom'"
+                            [class.bg-primary/10]="newMapPreset === 'custom'">
+                      <strong class="block text-[11px] text-on-surface">Personalizado</strong>
+                      <span class="text-[10px] text-on-surface-variant">Manual GPS</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Nombre de la Región & Estilo de Mapa -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block font-bold text-on-surface mb-1">Nombre de la Región / Ciudad en Mapa *</label>
+                    <input 
+                      type="text" 
+                      [(ngModel)]="newMapRegionName" 
+                      placeholder="Ej: Quito • Cumbayá & Centro Histórico" 
+                      class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-on-surface mb-1">Estilo Visual del Mapa *</label>
+                    <select [(ngModel)]="newMapStyle" class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary">
+                      <option value="cinematic">🎬 Cinematográfico Dark (Recomendado)</option>
+                      <option value="satellite">🛰️ Satelital Alta Resolución</option>
+                      <option value="streets">🗺️ Calles & Vialidad Logística</option>
+                      <option value="dark">🌙 Dark Mode Minimalista</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Coordenadas GPS (Latitud, Longitud, Zoom) -->
+                <div class="grid grid-cols-3 gap-2">
+                  <div>
+                    <label class="block font-bold text-on-surface mb-1">Latitud GPS *</label>
+                    <input 
+                      type="number" 
+                      step="0.0001"
+                      [(ngModel)]="newMapLat" 
+                      placeholder="19.3242" 
+                      class="w-full h-10 px-3 font-mono rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-on-surface mb-1">Longitud GPS *</label>
+                    <input 
+                      type="number" 
+                      step="0.0001"
+                      [(ngModel)]="newMapLng" 
+                      placeholder="-99.2014" 
+                      class="w-full h-10 px-3 font-mono rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-on-surface mb-1">Zoom Inicial (1-18)</label>
+                    <input 
+                      type="number" 
+                      [(ngModel)]="newMapZoom" 
+                      placeholder="12" 
+                      class="w-full h-10 px-3 font-mono rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <!-- Primera Locación en el Mapa -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block font-bold text-on-surface mb-1">Nombre de la Locación Principal</label>
+                    <input 
+                      type="text" 
+                      [(ngModel)]="newMapFirstLocationName" 
+                      placeholder="Ej: Hacienda San José / Base Camp" 
+                      class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label class="block font-bold text-on-surface mb-1">Dirección / Referencia Vial</label>
+                    <input 
+                      type="text" 
+                      [(ngModel)]="newMapFirstLocationAddress" 
+                      placeholder="Ej: Vía Interoceánica km 7.5" 
+                      class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <!-- Notas Logísticas & Vialidad -->
+                <div>
+                  <label class="block font-bold text-on-surface mb-1">Notas Logísticas de Acceso & Estacionamiento</label>
+                  <textarea 
+                    [(ngModel)]="newMapLogisticsNotes" 
+                    rows="2" 
+                    placeholder="Ej: Acceso para camiones de 10T habilitado. Acometida trifásica 80A. Espacio para planta generadora..." 
+                    class="w-full p-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary leading-relaxed text-xs"
+                  ></textarea>
+                </div>
+
+                <!-- Live Mini-Preview del Mapa -->
+                <div class="p-3 rounded-xl bg-slate-950 text-white flex items-center justify-between border border-slate-800">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-secondary text-white flex items-center justify-center">
+                      <span class="material-symbols-outlined text-[18px]">location_on</span>
+                    </div>
+                    <div>
+                      <p class="font-bold text-xs">{{ newMapRegionName }}</p>
+                      <span class="font-mono text-[10px] text-white/70">{{ newMapLat }}° N, {{ newMapLng }}° W • Zoom {{ newMapZoom }}x</span>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded bg-white/10 text-[10px] font-mono uppercase">{{ newMapStyle }}</span>
+                </div>
+
+              </div>
+            }
+
+            <!-- Modal Footer Actions -->
+            <div class="flex items-center justify-between pt-3 border-t border-surface-container">
               <div>
-                <label class="block font-bold text-on-surface mb-1">Director de Arte / Productor Asignado</label>
-                <input 
-                  type="text" 
-                  [(ngModel)]="newProjectLead" 
-                  placeholder="Ej: Mateo Valenzuela / Laura Morales" 
-                  class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
-                />
+                @if (createModalTab() === 'map') {
+                  <button type="button" (click)="createModalTab.set('general')" class="text-xs text-primary font-bold hover:underline cursor-pointer">
+                    ← Volver a Ficha
+                  </button>
+                }
               </div>
 
-              <div>
-                <label class="block font-bold text-on-surface mb-1">Descripción / Ficha de Rodaje</label>
-                <textarea 
-                  [(ngModel)]="newProjectDescription" 
-                  rows="3" 
-                  placeholder="Detalla los requerimientos técnicos, fechas estimadas de shooting y perfil de recintos buscados..." 
-                  class="w-full p-3 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
-                ></textarea>
+              <div class="flex items-center gap-2">
+                <button type="button" (click)="closeCreateModal()" class="px-4 py-2 rounded-lg bg-surface-container text-on-surface text-xs font-semibold hover:bg-surface-container-high cursor-pointer">
+                  Cancelar
+                </button>
+                <button type="button" (click)="submitCreateProject()" [disabled]="!newProjectTitle || !newProjectCode" class="px-5 py-2 rounded-lg bg-primary text-on-primary text-xs font-bold shadow-sm hover:brightness-105 disabled:opacity-50 cursor-pointer flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                  <span>Crear Proyecto & Guardar Mapa</span>
+                </button>
               </div>
-            </div>
-
-            <div class="flex items-center justify-end gap-2 pt-3 border-t border-surface-container">
-              <button (click)="closeCreateModal()" class="px-4 py-2 rounded-lg bg-surface-container text-on-surface text-xs font-semibold hover:bg-surface-container-high cursor-pointer">
-                Cancelar
-              </button>
-              <button (click)="submitCreateProject()" [disabled]="!newProjectTitle || !newProjectCode" class="px-5 py-2 rounded-lg bg-primary text-on-primary text-xs font-bold shadow-sm hover:brightness-105 disabled:opacity-50 cursor-pointer">
-                Crear y Abrir Estructura
-              </button>
             </div>
 
           </div>
@@ -892,10 +1127,23 @@ export class AdminDashboardComponent implements OnInit {
   public tokenExpiresInDays: number = 15;
 
   // Formulario nuevo proyecto
+  public createModalTab = signal<'general' | 'map'>('general');
   public newProjectTitle: string = '';
   public newProjectCode: string = 'LOC-2026-N';
   public newProjectLead: string = 'Mateo Valenzuela';
   public newProjectDescription: string = '';
+
+  // Configuración de mapa para el nuevo proyecto
+  public newMapPreset: string = 'cdmx_sur';
+  public newMapRegionName: string = 'Ciudad de México • Jardines del Pedregal & San Telmo';
+  public newMapLat: number = 19.3242;
+  public newMapLng: number = -99.2014;
+  public newMapZoom: number = 12;
+  public newMapStyle: 'satellite' | 'streets' | 'dark' | 'cinematic' = 'cinematic';
+  public newMapFirstLocationName: string = 'Villa Moderna Pedregal';
+  public newMapFirstLocationAddress: string = 'Paseo del Pedregal #420, CDMX';
+  public newMapLogisticsNotes: string = 'Acceso por Anillo Periférico Sur. Autorización para 3 camiones de 10T y planta 125kW.';
+  public newMapEmbedUrl: string = '';
 
   ngOnInit() {
     if (this.projects().length > 0) {
@@ -1005,11 +1253,11 @@ export class AdminDashboardComponent implements OnInit {
 
   copyDirectClientLink(proj: Project) {
     const origin = window.location.origin;
-    const directUrl = `${origin}/p/${proj.id}?code=${proj.accessCode}`;
+    const directUrl = `${origin}/?project=${proj.id}&code=${proj.accessCode}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(directUrl);
     }
-    this.favoritesService.triggerToast(`Enlace directo con código para "${proj.title}" copiado al portapapeles.`);
+    this.favoritesService.triggerToast(`Enlace de login generado para "${proj.title}" (Código: ${proj.accessCode}).`);
   }
 
   // Métodos para Chat de Notas DP
@@ -1087,11 +1335,107 @@ export class AdminDashboardComponent implements OnInit {
     this.newProjectCode = `LOC-${num}`;
   }
 
+  applyMapPreset(presetKey: string) {
+    this.newMapPreset = presetKey;
+    if (presetKey === 'cdmx_sur') {
+      this.newMapRegionName = 'Ciudad de México • Jardines del Pedregal & San Telmo';
+      this.newMapLat = 19.3242;
+      this.newMapLng = -99.2014;
+      this.newMapZoom = 12;
+      this.newMapStyle = 'cinematic';
+      this.newMapFirstLocationName = 'Villa Moderna Pedregal';
+      this.newMapFirstLocationAddress = 'Paseo del Pedregal #420, CDMX';
+      this.newMapLogisticsNotes = 'Acceso por Anillo Periférico Sur. Autorización para 3 camiones de 10T y planta 125kW.';
+    } else if (presetKey === 'oaxaca_costa') {
+      this.newMapRegionName = 'Oaxaca / Costa Esmeralda • Puerto Escondido & Mazunte';
+      this.newMapLat = 15.8601;
+      this.newMapLng = -97.0722;
+      this.newMapZoom = 11;
+      this.newMapStyle = 'satellite';
+      this.newMapFirstLocationName = 'Villa Acantilado Zicatela';
+      this.newMapFirstLocationAddress = 'Camino al Faro s/n, Punta Zicatela, Oaxaca';
+      this.newMapLogisticsNotes = 'Carretera Costera 200. Se requiere tracción 4x4 para el acantilado y permisos de Parque Nacional.';
+    } else if (presetKey === 'valle_bravo') {
+      this.newMapRegionName = 'Valle de Bravo & Carretera Panorámica Los Álamos';
+      this.newMapLat = 19.1925;
+      this.newMapLng = -100.1302;
+      this.newMapZoom = 13;
+      this.newMapStyle = 'streets';
+      this.newMapFirstLocationName = 'Pabellón Industrial & Pista Los Álamos';
+      this.newMapFirstLocationAddress = 'Carretera Colorines km 12, Valle de Bravo, EdoMex';
+      this.newMapLogisticsNotes = 'Circuito asfáltico cerrado de 3.2km. Base Camp con 4 supercargadores trifásicos 350kW.';
+    } else if (presetKey === 'polanco') {
+      this.newMapRegionName = 'Polanco & Bosque de Chapultepec, CDMX';
+      this.newMapLat = 19.4326;
+      this.newMapLng = -99.1912;
+      this.newMapZoom = 14;
+      this.newMapStyle = 'dark';
+      this.newMapFirstLocationName = 'Mansión Neoclásica Campos Elíseos';
+      this.newMapFirstLocationAddress = 'Campos Elíseos #380, Polanco V Sección, CDMX';
+      this.newMapLogisticsNotes = 'Zona Polanco / Reforma. Permisos de rodaje CDMX FILMA vigentes. Horario nocturno 20:00 a 05:00 hrs.';
+    } else if (presetKey === 'quito_cumbaya') {
+      this.newMapRegionName = 'Quito / Cumbayá & Centro Colonial (Ecuador)';
+      this.newMapLat = -0.1807;
+      this.newMapLng = -78.4678;
+      this.newMapZoom = 13;
+      this.newMapStyle = 'cinematic';
+      this.newMapFirstLocationName = 'Hacienda Cumbayá & Jardines';
+      this.newMapFirstLocationAddress = 'Vía Interoceánica km 8.5, Cumbayá, Quito';
+      this.newMapLogisticsNotes = 'Acceso directo por Vía Interoceánica. Estacionamiento amplio para trailers técnicos y catering.';
+    } else if (presetKey === 'guayaquil_costa') {
+      this.newMapRegionName = 'Guayaquil / Samborondón & Vía a la Costa (Ecuador)';
+      this.newMapLat = -2.1494;
+      this.newMapLng = -79.8691;
+      this.newMapZoom = 13;
+      this.newMapStyle = 'satellite';
+      this.newMapFirstLocationName = 'Residencia Náutica Samborondón';
+      this.newMapFirstLocationAddress = 'Av. Samborondón km 4.5, Guayas';
+      this.newMapLogisticsNotes = 'Canal navegable privado. Acceso controlado 24/7 y acometida eléctrica para generadores móviles.';
+    } else if (presetKey === 'medellin') {
+      this.newMapRegionName = 'Medellín / El Poblado & Llanogrande (Colombia)';
+      this.newMapLat = 6.2088;
+      this.newMapLng = -75.5659;
+      this.newMapZoom = 13;
+      this.newMapStyle = 'cinematic';
+      this.newMapFirstLocationName = 'Villa Contemporánea Llanogrande';
+      this.newMapFirstLocationAddress = 'Vía Las Palmas km 14, Rionegro / Medellín';
+      this.newMapLogisticsNotes = 'Vía rápida Las Palmas. Clima templado y helipuerto privado a 5 minutos.';
+    }
+  }
+
   async submitCreateProject() {
     if (!this.newProjectTitle || !this.newProjectCode) return;
-    const proj = await this.projectsService.createProject(this.newProjectTitle, this.newProjectCode, this.newProjectDescription);
+
+    const mapConfig: ProjectMapConfig = {
+      regionName: this.newMapRegionName || 'Región Técnica de Rodaje',
+      centerLat: Number(this.newMapLat) || 19.3242,
+      centerLng: Number(this.newMapLng) || -99.2014,
+      zoom: Number(this.newMapZoom) || 12,
+      mapStyle: this.newMapStyle,
+      embedUrl: this.newMapEmbedUrl || undefined,
+      logisticsNotes: this.newMapLogisticsNotes,
+      markers: [
+        {
+          name: this.newMapFirstLocationName || 'Locación Principal',
+          category: 'Locación Principal',
+          lat: Number(this.newMapLat) || 19.3242,
+          lng: Number(this.newMapLng) || -99.2014,
+          address: this.newMapFirstLocationAddress || 'Dirección de Rodaje',
+          logisticsNote: this.newMapLogisticsNotes
+        }
+      ]
+    };
+
+    const proj = await this.projectsService.createProject(
+      this.newProjectTitle, 
+      this.newProjectCode, 
+      this.newProjectDescription,
+      mapConfig
+    );
+
     this.showCreateModal.set(false);
-    this.favoritesService.triggerToast(`Proyecto "${proj.title}" creado exitosamente.`);
+    this.createModalTab.set('general');
+    this.favoritesService.triggerToast(`Proyecto "${proj.title}" creado con su mapa específico para ${mapConfig.regionName}.`);
     this.router.navigate(['/admin/projects', proj.id, 'edit']);
   }
 }

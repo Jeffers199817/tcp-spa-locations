@@ -146,18 +146,25 @@ export class ClientAccessComponent implements OnInit {
   public loading: boolean = false;
 
   async ngOnInit() {
-    // 1. Verificar si viene código directo por query parameter (ej: ?code=LOC-2026-X)
     const codeParam = this.route.snapshot.queryParamMap.get('code');
+    const projectId = this.route.snapshot.queryParamMap.get('project');
+    const blockedNotice = this.route.snapshot.queryParamMap.get('blockedNotice');
     const requireAuth = this.route.snapshot.queryParamMap.get('requireAuth');
 
-    if (requireAuth === 'true') {
+    if (blockedNotice === 'unauthorized_project') {
+      this.errorMessage = 'Acceso Restringido: Tu sesión actual no tiene autorización para ese proyecto. Ingresa el código asignado a esa producción.';
+    } else if (requireAuth === 'true') {
       this.infoNotice = 'Se requiere autenticación de proyecto para acceder al material privado.';
     }
 
     if (codeParam) {
       this.passcode = codeParam;
-      this.infoNotice = `Validando código de enlace directo: ${codeParam}...`;
-      await this.handleAuth(true);
+      const proj = this.projectsService.allProjects().find(p => p.accessCode === codeParam.toUpperCase() || p.id === projectId);
+      if (proj) {
+        this.infoNotice = `Acreditación preparada para "${proj.title}". Haz clic en "Ingresar a la Galería" para acceder.`;
+      } else {
+        this.infoNotice = `Código "${codeParam}" cargado. Haz clic en "Ingresar a la Galería" para continuar.`;
+      }
     }
   }
 
@@ -175,7 +182,7 @@ export class ClientAccessComponent implements OnInit {
     this.infoNotice = '';
   }
 
-  async handleAuth(isAutoFromUrl: boolean = false) {
+  async handleAuth() {
     const clean = this.passcode.trim().toUpperCase();
 
     // Acceso administrativo directo si se ingresa la clave de admin
@@ -200,15 +207,11 @@ export class ClientAccessComponent implements OnInit {
     if (project) {
       try {
         sessionStorage.setItem('pfe_client_auth_code', this.passcode.toUpperCase());
+        sessionStorage.setItem('pfe_client_authorized_project_id', project.id);
       } catch {}
 
-      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-      this.favoritesService.triggerToast(`Acceso autorizado a ${project.title}`);
-      if (returnUrl) {
-        this.router.navigateByUrl(returnUrl);
-      } else {
-        this.router.navigate(['/p', project.id]);
-      }
+      this.favoritesService.triggerToast(`Acreditación aprobada para "${project.title}". Acceso concedido.`);
+      this.router.navigate(['/p', project.id]);
     } else {
       this.errorMessage = `Código "${this.passcode}" no reconocido o no autorizado. Solicita acceso a tu coordinador de producción.`;
     }

@@ -11,7 +11,7 @@ export const clientGuard: CanActivateFn = async (route, state) => {
   const targetProjectId = route.paramMap.get('id');
   const codeParam = route.queryParamMap.get('code');
 
-  // 1. Si es un administrador autenticado, permitir acceso a cualquier proyecto
+  // 1. Administrador autenticado: acceso irrestricto a todos los proyectos
   if (adminAuth.isAuthenticated()) {
     if (targetProjectId) {
       projectsService.selectProjectById(targetProjectId);
@@ -19,33 +19,43 @@ export const clientGuard: CanActivateFn = async (route, state) => {
     return true;
   }
 
-  // 2. Si viene con código en la URL (ej: /p/:id?code=LOC-2026-X)
-  if (codeParam) {
-    const verified = await projectsService.verifyCodeAndLoad(codeParam);
-    if (verified) {
-      // Si la URL especifica un proyecto, verificar que coincida con el código ingresado
-      if (!targetProjectId || verified.id === targetProjectId) {
-        return true;
-      }
-    }
-  }
-
-  // 3. Si hay un código de sesión activa guardado en sessionStorage
+  // 2. Sesión activa en sessionStorage
   try {
     const sessionCode = sessionStorage.getItem('pfe_client_auth_code');
+    const authorizedProjectId = sessionStorage.getItem('pfe_client_authorized_project_id');
+
     if (sessionCode) {
       const verified = await projectsService.verifyCodeAndLoad(sessionCode);
       if (verified) {
-        // En /seleccionadas permitimos si hay sesión activa; en /p/:id verificamos correspondencia
-        if (!targetProjectId || verified.id === targetProjectId) {
+        // En /seleccionadas permitimos el acceso si hay sesión activa
+        if (!targetProjectId) {
           return true;
+        }
+
+        // En /p/:id verificamos que el ID coincida estrictamente con el proyecto autorizado
+        if (verified.id === targetProjectId || authorizedProjectId === targetProjectId) {
+          projectsService.selectProjectById(targetProjectId);
+          return true;
+        } else {
+          // Intento de ver otro proyecto no autorizado: BLOQUEAR y enviar a login
+          return router.createUrlTree(['/'], {
+            queryParams: { 
+              project: targetProjectId,
+              requireAuth: 'true',
+              blockedNotice: 'unauthorized_project'
+            }
+          });
         }
       }
     }
   } catch {}
 
-  // 4. Sin sesión autorizada o código inválido: redirigir a pantalla de login
+  // 3. Si no hay sesión pero viene código en la URL, redirigir a la pantalla de login con código precargado
   return router.createUrlTree(['/'], {
-    queryParams: { returnUrl: state.url, requireAuth: 'true' }
+    queryParams: { 
+      project: targetProjectId || undefined,
+      code: codeParam || undefined,
+      requireAuth: 'true' 
+    }
   });
 };
