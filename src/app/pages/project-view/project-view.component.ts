@@ -267,6 +267,14 @@ interface LightboxItem {
                             <span class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-on-surface/80 text-surface font-label-md text-[10px] font-bold">4K WebP</span>
                           }
 
+                          <!-- Download Quick Button on Thumbnail -->
+                          <button 
+                            (click)="downloadMediaItem(item, '4k'); $event.stopPropagation()"
+                            class="absolute top-2 right-11 w-8 h-8 rounded-full bg-surface-container-lowest/90 hover:bg-white text-on-surface hover:text-primary backdrop-blur-sm flex items-center justify-center shadow transition-transform active:scale-90 cursor-pointer border border-black/5"
+                            title="Descargar imagen (4K Master)">
+                            <span class="material-symbols-outlined text-[17px]">download</span>
+                          </button>
+
                           <button 
                             (click)="toggleFavorite(item.id, item.title)"
                             class="fav-toggle-btn absolute top-2 right-2 w-8 h-8 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm flex items-center justify-center shadow transition-transform active:scale-90 cursor-pointer">
@@ -284,9 +292,17 @@ interface LightboxItem {
                             <span class="font-headline-sm text-sm font-bold text-on-surface truncate">{{ item.title }}</span>
                             <div class="flex items-center gap-1.5 shrink-0">
                               @if (hasNote(item.id)) {
-                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
-                                  <span class="material-symbols-outlined text-[12px]">rate_review</span>
-                                  <span>DP</span>
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 shadow-xs cursor-pointer hover:bg-amber-200 transition-colors" 
+                                      (click)="openLightboxItemById(item.id); $event.stopPropagation()"
+                                      title="Ver requerimiento y respuestas del admin">
+                                  <span class="material-symbols-outlined text-[12px]">forum</span>
+                                  <span>Nota DP</span>
+                                  @if (getNoteRepliesCount(item.id) > 0) {
+                                    <span class="bg-emerald-600 text-white px-1.5 py-0.2 rounded-full text-[9px] font-extrabold flex items-center gap-0.5">
+                                      <span class="material-symbols-outlined text-[10px]">verified</span>
+                                      {{ getNoteRepliesCount(item.id) }} Resp.
+                                    </span>
+                                  }
                                 </span>
                               }
                               <span class="font-label-md text-label-md text-primary font-semibold text-xs">{{ item.mime.includes('video') ? 'Video' : '4K' }}</span>
@@ -300,7 +316,9 @@ interface LightboxItem {
                           <div class="flex flex-wrap items-center gap-1.5 font-label-md text-label-md text-on-surface-variant text-[11px] mt-1">
                             <span class="px-1.5 py-0.5 rounded bg-surface-container">{{ item.width }}x{{ item.height }}</span>
                             <span class="px-1.5 py-0.5 rounded bg-surface-container text-emerald-700 font-semibold">Direct Sound OK</span>
-                            <button (click)="downloadMediaItem(item, '4k')" class="ml-auto text-secondary hover:text-primary transition-colors flex items-center gap-0.5 font-bold cursor-pointer" title="Descargar resolución master">
+                            <button (click)="downloadMediaItem(item, '4k'); $event.stopPropagation()" 
+                                    class="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded bg-secondary/10 hover:bg-secondary/20 text-secondary hover:text-primary transition-all font-bold text-[11px] cursor-pointer border border-secondary/20 shadow-xs" 
+                                    title="Descargar archivo en resolución master 4K">
                               <span class="material-symbols-outlined text-[14px]">download</span>
                               <span>Descargar</span>
                             </button>
@@ -464,49 +482,156 @@ interface LightboxItem {
           </button>
         </div>
 
-        <!-- Bottom Technical Specifications Ribbon with DP Note display & button -->
-        <div class="bg-[#0c0c0e]/95 backdrop-blur-xl rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 max-w-5xl mx-auto w-full text-white text-xs font-medium border border-white/20 z-20 shadow-2xl">
-          <div class="flex flex-col gap-1 text-left">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-              <span class="flex items-center gap-1.5 text-white/90">
-                <span class="material-symbols-outlined text-[16px] text-amber-400 shrink-0">wb_sunny</span>
-                <span class="line-clamp-1">{{ currentLightbox()?.specs }}</span>
+        <!-- Bottom Technical Specifications & Historial de Comentarios y Respuestas de la Empresa -->
+        <div class="bg-[#0c0c0e]/95 backdrop-blur-xl rounded-2xl p-3.5 sm:p-5 flex flex-col gap-3 max-w-5xl mx-auto w-full text-white text-xs font-medium border border-white/20 z-20 shadow-2xl">
+          
+          <!-- Top Row: Specs, Space Description & Action Buttons -->
+          <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-white/10">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-left">
+              <span class="flex items-center gap-1.5 text-white/90 font-mono text-[11px]">
+                <span class="material-symbols-outlined text-[15px] text-amber-400 shrink-0">wb_sunny</span>
+                <span>{{ currentLightbox()?.specs }}</span>
               </span>
-
               @if (currentNote()) {
-                <div class="flex items-center gap-2 bg-amber-500/20 border border-amber-500/40 px-3 py-1 rounded-lg text-amber-200 text-xs">
-                  <span class="material-symbols-outlined text-[16px] text-amber-400 shrink-0">rate_review</span>
-                  <div class="flex items-center gap-1.5 truncate max-w-xs sm:max-w-md">
-                    <strong class="text-amber-300 font-bold shrink-0">DP ({{ currentNote()?.category }}):</strong>
-                    <span class="truncate italic text-white/90">"{{ currentNote()?.noteText }}"</span>
-                  </div>
-                </div>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
+                  <span class="material-symbols-outlined text-[13px]">forum</span>
+                  <span>{{ (currentNote()?.replies?.length || 0) + 1 }} mensajes en hilo</span>
+                </span>
+                @if (currentNote()?.replies && currentNote()!.replies!.length > 0) {
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
+                    <span class="material-symbols-outlined text-[13px]">verified</span>
+                    <span>Admin PFE ha respondido</span>
+                  </span>
+                }
               }
             </div>
 
-            @if (currentLightbox()?.description) {
-              <p class="text-[11px] text-white/70 italic line-clamp-2 max-w-3xl border-t border-white/10 pt-1 mt-0.5">
-                <strong class="text-white/90 not-italic font-semibold">Descripción del espacio:</strong> {{ currentLightbox()?.description }}
-              </p>
-            }
+            <div class="flex items-center gap-2">
+              <button (click)="openDpNoteModal()" 
+                      class="px-3 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 border"
+                      [class.bg-amber-500]="!!currentNote()"
+                      [class.border-amber-400]="!!currentNote()"
+                      [class.text-black]="!!currentNote()"
+                      [class.hover:bg-amber-400]="!!currentNote()"
+                      [class.bg-[#1c1c22]]="!currentNote()"
+                      [class.border-white/30]="!currentNote()"
+                      [class.text-white]="!currentNote()"
+                      [class.hover:bg-white]="!currentNote()"
+                      [class.hover:text-black]="!currentNote()">
+                <span class="material-symbols-outlined text-[16px]">edit_note</span>
+                <span>{{ currentNote() ? 'Editar Mi Nota' : 'Añadir Nota DP' }}</span>
+              </button>
+            </div>
           </div>
 
-          <div class="flex items-center gap-2 shrink-0">
-            <button (click)="openDpNoteModal()" 
-                    class="px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 border"
-                    [class.bg-amber-500]="!!currentNote()"
-                    [class.border-amber-400]="!!currentNote()"
-                    [class.text-black]="!!currentNote()"
-                    [class.hover:bg-amber-400]="!!currentNote()"
-                    [class.bg-[#1c1c22]]="!currentNote()"
-                    [class.border-white/30]="!currentNote()"
-                    [class.text-white]="!currentNote()"
-                    [class.hover:bg-white]="!currentNote()"
-                    [class.hover:text-black]="!currentNote()">
-              <span class="material-symbols-outlined text-[18px]">edit_note</span>
-              <span>{{ currentNote() ? 'Editar Nota de DP' : 'Añadir Nota de DP' }}</span>
-            </button>
+          <!-- Description if exists -->
+          @if (currentLightbox()?.description) {
+            <p class="text-[11px] text-white/70 italic line-clamp-2 text-left">
+              <strong class="text-white/90 not-italic font-semibold">Descripción del espacio:</strong> {{ currentLightbox()?.description }}
+            </p>
+          }
+
+          <!-- SECCIÓN CLAVE: HISTORIAL DE COMENTARIOS Y RESPUESTAS DEL ADMIN / EMPRESA -->
+          <div class="flex flex-col gap-2.5 pt-1 text-left">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px] text-amber-400">forum</span>
+                <span>Historial de Comentarios & Respuestas de la Empresa:</span>
+              </span>
+              @if (currentNote()?.replies && currentNote()!.replies!.length > 0) {
+                <span class="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/40 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>{{ currentNote()!.replies!.length }} respuesta(s) oficial(es)</span>
+                </span>
+              }
+            </div>
+
+            @if (currentNote()) {
+              <!-- Hilo de Conversación Visual -->
+              <div class="space-y-2 max-h-52 overflow-y-auto pr-1">
+                
+                <!-- 1. Requerimiento Técnico Original del DP / Solicitante -->
+                <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs flex flex-col gap-1 text-left">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="font-bold text-amber-300 flex items-center gap-1.5">
+                      <span class="material-symbols-outlined text-[15px]">rate_review</span>
+                      <span>{{ currentNote()?.author }}</span>
+                      <span class="text-[9px] uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-200 border border-amber-500/30 font-semibold">
+                        {{ currentNote()?.category }}
+                      </span>
+                    </span>
+                    <span class="text-[10px] text-white/50">{{ currentNote()?.updatedAt }}</span>
+                  </div>
+                  <p class="text-white/95 leading-relaxed">{{ currentNote()?.noteText }}</p>
+                </div>
+
+                <!-- 2. Respuestas de la Empresa / Admin y del Equipo -->
+                @for (rep of currentNote()?.replies || []; track rep.id) {
+                  <div class="p-3 rounded-xl border text-xs flex flex-col gap-1 text-left"
+                       [class.bg-emerald-950/40]="rep.role === 'Admin'"
+                       [class.border-emerald-500/40]="rep.role === 'Admin'"
+                       [class.bg-white/5]="rep.role !== 'Admin'"
+                       [class.border-white/10]="rep.role !== 'Admin'">
+                    <div class="flex items-center justify-between text-[11px]">
+                      <span class="font-bold flex items-center gap-1.5"
+                            [class.text-emerald-300]="rep.role === 'Admin'"
+                            [class.text-amber-200]="rep.role !== 'Admin'">
+                        @if (rep.role === 'Admin') {
+                          <span class="material-symbols-outlined text-[15px] text-emerald-400">verified</span>
+                          <span class="uppercase text-[9px] tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-extrabold border border-emerald-400/30">
+                            Respuesta de la Empresa (Admin)
+                          </span>
+                        } @else {
+                          <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                        }
+                        <span>{{ rep.author }}</span>
+                      </span>
+                      <span class="text-[10px] text-white/50">{{ rep.timestamp }}</span>
+                    </div>
+                    <p class="text-white/95 leading-relaxed pl-1">{{ rep.message }}</p>
+                  </div>
+                }
+              </div>
+
+              <!-- Input para responder directamente sobre esta imagen -->
+              <div class="flex items-center gap-2 pt-1 border-t border-white/10">
+                <input 
+                  type="text"
+                  [(ngModel)]="lightboxReplyText"
+                  (keyup.enter)="sendLightboxReply()"
+                  placeholder="Escribe una respuesta o pregunta técnica para la empresa..."
+                  class="flex-grow bg-[#0a0a0d] border border-white/30 focus:border-amber-400 rounded-xl px-3.5 py-2 text-white text-xs placeholder:text-white/40 focus:outline-none transition-colors"
+                />
+                <button type="button" (click)="sendLightboxReply()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl cursor-pointer whitespace-nowrap shadow-sm active:scale-95 transition-all flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[15px]">send</span>
+                  <span>Enviar</span>
+                </button>
+              </div>
+
+            } @else {
+              <!-- Estado sin comentarios aún -->
+              <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div class="flex items-center gap-2 text-white/70">
+                  <span class="material-symbols-outlined text-amber-400 text-[18px]">chat_bubble_outline</span>
+                  <span>Sin notas técnicas aún para esta imagen. ¿Deseas consultar algo a la empresa?</span>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                  <input 
+                    type="text"
+                    [(ngModel)]="lightboxReplyText"
+                    (keyup.enter)="sendLightboxReply()"
+                    placeholder="Escribir requerimiento técnico..."
+                    class="flex-grow sm:w-64 bg-[#0a0a0d] border border-white/30 focus:border-amber-400 rounded-xl px-3 py-1.5 text-white text-xs placeholder:text-white/40 focus:outline-none"
+                  />
+                  <button type="button" (click)="sendLightboxReply()" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl cursor-pointer whitespace-nowrap shadow-sm active:scale-95 transition-all">
+                    Enviar
+                  </button>
+                </div>
+              </div>
+            }
+
           </div>
+
         </div>
 
         <!-- MODAL INTERACTIVO DE NOTA DE DP -->
@@ -688,6 +813,7 @@ export class ProjectViewComponent implements OnInit {
   public favCount = computed(() => this.favoritesService.count());
   public lastToast = computed(() => this.favoritesService.lastToast());
   public currentCode = computed(() => this.project()?.accessCode || 'LOC-2026-X');
+  public currentProjectId = computed(() => this.project()?.id || sessionStorage.getItem('pfe_client_authorized_project_id') || '10000000-0000-4000-8000-000000000001');
   public isAdmin = computed(() => this.adminAuth.isAuthenticated());
 
   public density = signal<'large' | 'comfortable'>('large');
@@ -854,7 +980,67 @@ export class ProjectViewComponent implements OnInit {
     this.favoritesService.triggerToast(`Descargando "${item.title}" en formato ${resolution.toUpperCase()}...`);
   }
 
-  private downloadFile(url: string, filename: string) {
+  private async downloadFile(url: string, filename: string) {
+    if (!url) return;
+    this.favoritesService.triggerToast(`Iniciando descarga: ${filename}...`);
+
+    try {
+      // 1. Intentar mediante Fetch y Blob directo con ObjectURL
+      const response = await fetch(url, { mode: 'cors' });
+      if (!response.ok) throw new Error('CORS or network error');
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+      this.favoritesService.triggerToast(`Descarga completada: ${filename}`);
+      return;
+    } catch {
+      // 2. Si fetch es restringido por CORS, renderizar en HTML5 Canvas con crossOrigin anonymous
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || 1920;
+          canvas.height = img.naturalHeight || 1080;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = filename.replace(/\.webp$/i, '.jpg');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+                this.favoritesService.triggerToast(`Descarga guardada: ${filename}`);
+                return;
+              }
+              this.fallbackDirectDownload(url, filename);
+            }, 'image/jpeg', 0.95);
+          } else {
+            this.fallbackDirectDownload(url, filename);
+          }
+        };
+        img.onerror = () => {
+          this.fallbackDirectDownload(url, filename);
+        };
+        img.src = url;
+      } catch {
+        this.fallbackDirectDownload(url, filename);
+      }
+    }
+  }
+
+  private fallbackDirectDownload(url: string, filename: string) {
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
@@ -862,6 +1048,7 @@ export class ProjectViewComponent implements OnInit {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    this.favoritesService.triggerToast(`Abriendo archivo para descarga: ${filename}`);
   }
 
   // Control de Notas de DP y Social Chat
@@ -870,6 +1057,41 @@ export class ProjectViewComponent implements OnInit {
   public noteCategory = signal<string>('Lentes / Óptica');
   public noteAuthor: string = 'Director de Fotografía (DP)';
   public replyInputText: string = '';
+  public lightboxReplyText: string = '';
+
+  getNoteRepliesCount(id: string): number {
+    return this.favoritesService.getNote(id)?.replies?.length || 0;
+  }
+
+  sendLightboxReply() {
+    const cur = this.currentLightbox();
+    if (!cur || !this.lightboxReplyText || !this.lightboxReplyText.trim()) return;
+    
+    const existing = this.favoritesService.getNote(cur.id);
+    const author = sessionStorage.getItem('pfe_client_name') || 'Director de Fotografía (DP)';
+    const role = (sessionStorage.getItem('pfe_client_role') as any) || 'DP';
+
+    if (!existing) {
+      this.favoritesService.saveNote(
+        cur.id,
+        this.lightboxReplyText,
+        'General',
+        author,
+        {
+          locationName: cur.locationName,
+          mediaTitle: cur.title,
+          mediaThumbnailUrl: cur.url,
+          projectId: this.currentProjectId()
+        }
+      );
+      this.favoritesService.triggerToast('Requerimiento técnico registrado.');
+      this.lightboxReplyText = '';
+      return;
+    }
+
+    this.favoritesService.addReplyToNote(cur.id, this.lightboxReplyText, author, role);
+    this.lightboxReplyText = '';
+  }
 
   sendReply() {
     const cur = this.currentLightbox();

@@ -280,14 +280,14 @@ export interface AssetMetricRow {
 
                 <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-surface-container-high flex flex-col justify-between">
                   <div class="flex items-center justify-between">
-                    <span class="text-on-surface-variant uppercase tracking-wider text-[11px] font-bold">Tokens Acreditados</span>
+                    <span class="text-on-surface-variant uppercase tracking-wider text-[11px] font-bold">Sesiones de Clientes</span>
                     <span class="p-2 rounded-lg bg-surface-container-low text-primary material-symbols-outlined text-[18px]">verified_user</span>
                   </div>
                   <div class="mt-4 flex items-baseline gap-2">
-                    <span class="text-3xl font-extrabold text-on-surface">{{ clientTokens().length }}</span>
-                    <span class="text-xs text-primary font-semibold">sesiones emitidas</span>
+                    <span class="text-3xl font-extrabold text-on-surface">{{ totalSessionClicks() }}</span>
+                    <span class="text-xs text-emerald-600 font-semibold">clics por sesión</span>
                   </div>
-                  <div class="mt-3 text-[11px] text-on-surface-variant">Acceso controlado con token</div>
+                  <div class="mt-3 text-[11px] text-on-surface-variant">{{ clientTokens().length }} enlaces y tokens activos</div>
                 </div>
               </section>
 
@@ -712,11 +712,17 @@ export interface AssetMetricRow {
 
                 <!-- Tabla de Tokens Activos -->
                 <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container-high overflow-hidden">
-                  <div class="p-4 border-b border-surface-container-high flex items-center justify-between">
+                  <div class="p-4 border-b border-surface-container-high flex flex-wrap items-center justify-between gap-2">
                     <h3 class="font-bold text-sm text-on-surface flex items-center gap-2">
                       <span class="material-symbols-outlined text-primary text-[18px]">vpn_key</span>
                       <span>Tokens Acreditados Emitidos ({{ clientTokens().length }})</span>
                     </h3>
+                    <div class="flex items-center gap-2">
+                      <span class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-300 flex items-center gap-1.5 shadow-xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>{{ totalSessionClicks() }} Clics Registrados en Sesiones</span>
+                      </span>
+                    </div>
                   </div>
 
                   <div class="overflow-x-auto">
@@ -728,7 +734,7 @@ export interface AssetMetricRow {
                           <th class="py-3 px-4">Rol</th>
                           <th class="py-3 px-4">Proyecto</th>
                           <th class="py-3 px-4">Emisión / Expiración</th>
-                          <th class="py-3 px-4 text-center">Clics</th>
+                          <th class="py-3 px-4 text-center">Clics Detectados</th>
                           <th class="py-3 px-4 text-right">Acciones</th>
                         </tr>
                       </thead>
@@ -755,7 +761,20 @@ export interface AssetMetricRow {
                               <p class="text-rose-700 font-medium">Expira: {{ tok.expiresAt }}</p>
                             </td>
                             <td class="py-3 px-4 text-center">
-                              <span class="font-mono font-bold text-xs">{{ tok.clicksCount }}</span>
+                              <div class="inline-flex flex-col items-center">
+                                <span class="inline-flex items-center gap-1 font-mono font-extrabold text-xs px-2.5 py-0.5 rounded-full border shadow-xs"
+                                      [class.bg-emerald-50]="tok.clicksCount > 0"
+                                      [class.text-emerald-800]="tok.clicksCount > 0"
+                                      [class.border-emerald-300]="tok.clicksCount > 0"
+                                      [class.bg-surface-container-low]="tok.clicksCount === 0"
+                                      [class.text-on-surface-variant]="tok.clicksCount === 0"
+                                      [class.border-surface-container-high]="tok.clicksCount === 0">
+                                  @if (tok.clicksCount > 0) {
+                                    <span class="material-symbols-outlined text-[13px] text-emerald-600">ads_click</span>
+                                  }
+                                  <span>{{ tok.clicksCount }}</span>
+                                </span>
+                              </div>
                             </td>
                             <td class="py-3 px-4 text-right">
                               <div class="flex items-center justify-end gap-1.5">
@@ -1112,6 +1131,7 @@ export class AdminDashboardComponent implements OnInit {
   public lastToast = computed(() => this.favoritesService.lastToast());
   public allDpNotes = computed(() => this.favoritesService.getAllNotes());
   public clientTokens = computed(() => this.favoritesService.clientTokens());
+  public totalSessionClicks = computed(() => this.favoritesService.totalSessionClicks());
 
   public searchQuery: string = '';
   public activeTab = signal<'all' | 'published' | 'draft'>('all');

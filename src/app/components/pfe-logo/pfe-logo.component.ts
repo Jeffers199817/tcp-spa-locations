@@ -1,13 +1,14 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { AdminAuthService } from '../../services/admin-auth.service';
 
 @Component({
   selector: 'app-pfe-logo',
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <a [routerLink]="linkTo" class="group inline-flex items-center gap-2.5 cursor-pointer select-none no-underline" title="PFE Locaciones — Your story, our craft.">
+    <a [routerLink]="targetLink" class="group inline-flex items-center gap-2.5 cursor-pointer select-none no-underline" title="PFE Locaciones — Your story, our craft.">
       
       <!-- Vector Aperture Emblem -->
       <div class="relative w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center overflow-hidden border border-surface-container-high shadow-xs transition-transform duration-300 group-hover:scale-105 group-hover:border-primary/40">
@@ -44,7 +45,25 @@ import { RouterModule } from '@angular/router';
   `
 })
 export class PfeLogoComponent {
+  private adminAuth = inject(AdminAuthService);
+
   @Input() size: 'sm' | 'md' | 'lg' = 'md';
   @Input() showText: boolean = true;
-  @Input() linkTo: string = '/';
+  @Input() linkTo?: string | any[];
+
+  get targetLink(): string | any[] {
+    if (this.linkTo !== undefined) {
+      return this.linkTo;
+    }
+    if (this.adminAuth.isAuthenticated()) {
+      return '/admin';
+    }
+    try {
+      const authProj = sessionStorage.getItem('pfe_client_authorized_project_id');
+      if (authProj) {
+        return ['/p', authProj];
+      }
+    } catch {}
+    return '/';
+  }
 }

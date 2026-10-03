@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 
 export interface ToastNotification {
@@ -91,6 +91,11 @@ export class FavoritesService {
   // Tokens de sesión generados desde el Admin
   public clientTokens = signal<ClientSessionToken[]>([]);
 
+  // Total de clics registrados a través de todas las sesiones de clientes
+  public totalSessionClicks = computed(() => {
+    return this.clientTokens().reduce((acc, t) => acc + (t.clicksCount || 0), 0);
+  });
+
   public lastToast = signal<ToastNotification>({
     message: '',
     type: 'success',
@@ -98,11 +103,53 @@ export class FavoritesService {
   });
 
   private toastTimeout: any = null;
+  private syncChannel: BroadcastChannel | null = null;
 
   constructor(private supabase: SupabaseService) {
     this.initDpNotes();
     this.initLikesAndClicks();
     this.initClientTokens();
+    this.initCrossTabSync();
+  }
+
+  private initCrossTabSync() {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        this.syncChannel = new BroadcastChannel('pfe_state_sync_channel');
+        this.syncChannel.onmessage = (event) => {
+          if (event.data?.type === 'MEDIA_CLICK') {
+            if (event.data.mediaId && typeof event.data.count === 'number') {
+              const cur = new Map(this.mediaClicks());
+              cur.set(event.data.mediaId, event.data.count);
+              this.mediaClicks.set(cur);
+            }
+            if (event.data.tokens) {
+              this.clientTokens.set(event.data.tokens);
+            }
+          }
+        };
+      } catch {}
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'pfe_client_tokens_v1' && e.newValue) {
+          try {
+            this.clientTokens.set(JSON.parse(e.newValue));
+          } catch {}
+        }
+        if (e.key === 'pfe_media_clicks_v1' && e.newValue) {
+          try {
+            this.mediaClicks.set(new Map(Object.entries(JSON.parse(e.newValue))));
+          } catch {}
+        }
+        if (e.key === 'pfe_media_likes_v1' && e.newValue) {
+          try {
+            this.mediaLikes.set(new Map(Object.entries(JSON.parse(e.newValue))));
+          } catch {}
+        }
+      });
+    }
   }
 
   private initDpNotes() {
@@ -202,6 +249,11 @@ export class FavoritesService {
         const parsed = JSON.parse(savedLikes);
         this.mediaLikes.set(new Map(Object.entries(parsed)));
       }
+      const savedClicks = localStorage.getItem('pfe_media_clicks_v1');
+      if (savedClicks) {
+        const parsed = JSON.parse(savedClicks);
+        this.mediaClicks.set(new Map(Object.entries(parsed)));
+      }
     } catch {}
   }
 
@@ -210,6 +262,14 @@ export class FavoritesService {
       const obj: Record<string, number> = {};
       this.mediaLikes().forEach((v, k) => { obj[k] = v; });
       localStorage.setItem('pfe_media_likes_v1', JSON.stringify(obj));
+    } catch {}
+  }
+
+  private persistClicks() {
+    try {
+      const obj: Record<string, number> = {};
+      this.mediaClicks().forEach((v, k) => { obj[k] = v; });
+      localStorage.setItem('pfe_media_clicks_v1', JSON.stringify(obj));
     } catch {}
   }
 
@@ -321,6 +381,61 @@ export class FavoritesService {
     const count = (current.get(mediaId) || 0) + 1;
     current.set(mediaId, count);
     this.mediaClicks.set(current);
+    this.persistClicks();
+
+    // Actualizar clics de la sesión/token activa del cliente
+    let activeToken: string | null = null;
+    let activeCode: string | null = null;
+    let activeProjectId: string | null = null;
+    try {
+      activeToken = sessionStorage.getItem('pfe_client_session_token');
+      activeCode = sessionStorage.getItem('pfe_client_auth_code');
+      activeProjectId = sessionStorage.getItem('pfe_client_authorized_project_id');
+    } catch {}
+
+    const tokens = [...this.clientTokens()];
+    let tokenMatched = false;
+
+    if (activeToken) {
+      const found = tokens.find(t => t.token === activeToken);
+      if (found) {
+        found.clicksCount = (found.clicksCount || 0) + 1;
+        tokenMatched = true;
+      }
+    }
+
+    if (!tokenMatched && activeCode) {
+      const found = tokens.find(t => t.accessCode?.toUpperCase() === activeCode.toUpperCase());
+      if (found) {
+        found.clicksCount = (found.clicksCount || 0) + 1;
+        tokenMatched = true;
+      }
+    }
+
+    if (!tokenMatched && activeProjectId) {
+      const found = tokens.find(t => t.projectId === activeProjectId);
+      if (found) {
+        found.clicksCount = (found.clicksCount || 0) + 1;
+        tokenMatched = true;
+      }
+    }
+
+    if (tokenMatched) {
+      this.clientTokens.set(tokens);
+      this.persistClientTokens(tokens);
+    }
+
+    // Sincronizar en vivo con otras pestañas y panel de administración
+    if (this.syncChannel) {
+      try {
+        this.syncChannel.postMessage({
+          type: 'MEDIA_CLICK',
+          mediaId,
+          count,
+          tokens: this.clientTokens()
+        });
+      } catch {}
+    }
   }
 
   getClicks(mediaId: string): number {

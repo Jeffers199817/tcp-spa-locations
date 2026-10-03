@@ -74,7 +74,7 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
 
         <!-- Navigation Links -->
         <nav class="hidden lg:flex items-center gap-1 bg-surface-container-low/70 p-1 rounded-full shrink-0">
-          <a routerLink="/p/10000000-0000-4000-8000-000000000001" 
+          <a [routerLink]="['/p', currentProjectId()]" 
              routerLinkActive="bg-surface-container-lowest text-on-surface shadow-sm font-semibold"
              [routerLinkActiveOptions]="{exact: false}"
              class="px-3.5 py-1 rounded-full text-on-surface-variant hover:text-on-surface font-label-md text-xs transition-all">

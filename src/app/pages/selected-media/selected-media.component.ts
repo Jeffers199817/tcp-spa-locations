@@ -198,6 +198,15 @@ export interface SelectedCardItem {
                   <span>Exportar</span>
                 </label>
 
+                <!-- Direct Image Download Button -->
+                <button 
+                  (click)="triggerDownload(card, '4k'); $event.stopPropagation()"
+                  class="absolute bottom-2.5 right-2.5 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/75 hover:bg-black/90 backdrop-blur-md text-white text-[11px] font-semibold cursor-pointer shadow-sm border border-white/20 transition-all active:scale-95"
+                  title="Descargar imagen en resolución 4K">
+                  <span class="material-symbols-outlined text-[14px]">download</span>
+                  <span>Descargar</span>
+                </button>
+
                 <!-- Unselect / Vote Bookmark Button con Regla de 1 Desmarcado por Sesión -->
                 <button 
                   (click)="handleToggleCardSelection(card)"
@@ -228,9 +237,17 @@ export interface SelectedCardItem {
                       {{ card.title }}
                     </h3>
                     @if (hasNote(card.id)) {
-                      <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300 shrink-0" [title]="getNote(card.id)?.noteText || 'Nota DP'">
-                        <span class="material-symbols-outlined text-[12px]">rate_review</span>
+                      <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 shadow-xs shrink-0 cursor-pointer hover:bg-amber-200 transition-colors" 
+                            (click)="openLightbox(i); $event.stopPropagation()"
+                            [title]="getNote(card.id)?.noteText || 'Nota DP'">
+                        <span class="material-symbols-outlined text-[12px]">forum</span>
                         <span>DP</span>
+                        @if ((getNote(card.id)?.replies?.length || 0) > 0) {
+                          <span class="bg-emerald-600 text-white px-1.5 py-0.2 rounded-full text-[9px] font-extrabold flex items-center gap-0.5">
+                            <span class="material-symbols-outlined text-[10px]">verified</span>
+                            {{ getNote(card.id)!.replies!.length }} Resp.
+                          </span>
+                        }
                       </span>
                     }
                   </div>
@@ -415,42 +432,149 @@ export interface SelectedCardItem {
           </button>
         </div>
 
-        <!-- Bottom Technical Specifications Ribbon with DP Note display & button -->
-        <div class="bg-[#0c0c0e]/95 backdrop-blur-xl rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 max-w-5xl mx-auto w-full text-white text-xs font-medium border border-white/20 z-20 shadow-2xl">
-          <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-left">
-            <div class="flex items-center gap-3">
-              <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-amber-400">wb_sunny</span> Travesía solar: Azimut 112°</span>
-              <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-sky-400">straighten</span> 24mm - 35mm</span>
-              <span class="hidden md:flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-red-400">power</span> Trifásica 12m</span>
+        <!-- Bottom Technical Specifications Ribbon with DP Note display & Admin Replies Thread -->
+        <div class="bg-[#0c0c0e]/95 backdrop-blur-xl rounded-2xl p-3.5 sm:p-5 flex flex-col gap-3 max-w-5xl mx-auto w-full text-white text-xs font-medium border border-white/20 z-20 shadow-2xl">
+          
+          <!-- Top Row: Specs & Actions -->
+          <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-white/10">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-left">
+              <span class="flex items-center gap-1.5 text-white/90 font-mono text-[11px]">
+                <span class="material-symbols-outlined text-[15px] text-amber-400 shrink-0">wb_sunny</span>
+                <span>Travesía solar: Azimut 112° • 24mm - 35mm</span>
+              </span>
+              @if (currentNote()) {
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
+                  <span class="material-symbols-outlined text-[13px]">forum</span>
+                  <span>{{ (currentNote()?.replies?.length || 0) + 1 }} mensajes en hilo</span>
+                </span>
+                @if (currentNote()?.replies && currentNote()!.replies!.length > 0) {
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
+                    <span class="material-symbols-outlined text-[13px]">verified</span>
+                    <span>Admin PFE ha respondido</span>
+                  </span>
+                }
+              }
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button (click)="openDpNoteModal()" 
+                      class="px-3 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 border"
+                      [class.bg-amber-500]="!!currentNote()"
+                      [class.border-amber-400]="!!currentNote()"
+                      [class.text-black]="!!currentNote()"
+                      [class.hover:bg-amber-400]="!!currentNote()"
+                      [class.bg-[#1c1c22]]="!currentNote()"
+                      [class.border-white/30]="!currentNote()"
+                      [class.text-white]="!currentNote()"
+                      [class.hover:bg-white]="!currentNote()"
+                      [class.hover:text-black]="!currentNote()">
+                <span class="material-symbols-outlined text-[16px]">edit_note</span>
+                <span>{{ currentNote() ? 'Editar Mi Nota' : 'Añadir Nota DP' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- HISTORIAL DE COMENTARIOS Y RESPUESTAS DEL ADMIN / EMPRESA -->
+          <div class="flex flex-col gap-2.5 pt-1 text-left">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px] text-amber-400">forum</span>
+                <span>Historial de Comentarios & Respuestas de la Empresa:</span>
+              </span>
+              @if (currentNote()?.replies && currentNote()!.replies!.length > 0) {
+                <span class="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/40 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>{{ currentNote()!.replies!.length }} respuesta(s) de producción</span>
+                </span>
+              }
             </div>
 
             @if (currentNote()) {
-              <div class="flex items-center gap-2 bg-amber-500/20 border border-amber-500/40 px-3 py-1 rounded-lg text-amber-200 text-xs">
-                <span class="material-symbols-outlined text-[16px] text-amber-400 shrink-0">rate_review</span>
-                <div class="flex items-center gap-1.5 truncate max-w-xs sm:max-w-md">
-                  <strong class="text-amber-300 font-bold shrink-0">DP ({{ currentNote()?.category }}):</strong>
-                  <span class="truncate italic text-white/90">"{{ currentNote()?.noteText }}"</span>
+              <!-- Hilo de Conversación Visual -->
+              <div class="space-y-2 max-h-52 overflow-y-auto pr-1">
+                
+                <!-- 1. Requerimiento Técnico Original del DP / Solicitante -->
+                <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs flex flex-col gap-1 text-left">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="font-bold text-amber-300 flex items-center gap-1.5">
+                      <span class="material-symbols-outlined text-[15px]">rate_review</span>
+                      <span>{{ currentNote()?.author }}</span>
+                      <span class="text-[9px] uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-200 border border-amber-500/30 font-semibold">
+                        {{ currentNote()?.category }}
+                      </span>
+                    </span>
+                    <span class="text-[10px] text-white/50">{{ currentNote()?.updatedAt }}</span>
+                  </div>
+                  <p class="text-white/95 leading-relaxed">{{ currentNote()?.noteText }}</p>
+                </div>
+
+                <!-- 2. Respuestas de la Empresa / Admin y del Equipo -->
+                @for (rep of currentNote()?.replies || []; track rep.id) {
+                  <div class="p-3 rounded-xl border text-xs flex flex-col gap-1 text-left"
+                       [class.bg-emerald-950/40]="rep.role === 'Admin'"
+                       [class.border-emerald-500/40]="rep.role === 'Admin'"
+                       [class.bg-white/5]="rep.role !== 'Admin'"
+                       [class.border-white/10]="rep.role !== 'Admin'">
+                    <div class="flex items-center justify-between text-[11px]">
+                      <span class="font-bold flex items-center gap-1.5"
+                            [class.text-emerald-300]="rep.role === 'Admin'"
+                            [class.text-amber-200]="rep.role !== 'Admin'">
+                        @if (rep.role === 'Admin') {
+                          <span class="material-symbols-outlined text-[15px] text-emerald-400">verified</span>
+                          <span class="uppercase text-[9px] tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-extrabold border border-emerald-400/30">
+                            Respuesta de la Empresa (Admin)
+                          </span>
+                        } @else {
+                          <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                        }
+                        <span>{{ rep.author }}</span>
+                      </span>
+                      <span class="text-[10px] text-white/50">{{ rep.timestamp }}</span>
+                    </div>
+                    <p class="text-white/95 leading-relaxed pl-1">{{ rep.message }}</p>
+                  </div>
+                }
+              </div>
+
+              <!-- Input para responder directamente sobre esta imagen -->
+              <div class="flex items-center gap-2 pt-1 border-t border-white/10">
+                <input 
+                  type="text"
+                  [(ngModel)]="lightboxCardReplyText"
+                  (keyup.enter)="sendLightboxCardReply()"
+                  placeholder="Escribe una respuesta o pregunta técnica para la empresa..."
+                  class="flex-grow bg-[#0a0a0d] border border-white/30 focus:border-amber-400 rounded-xl px-3.5 py-2 text-white text-xs placeholder:text-white/40 focus:outline-none transition-colors"
+                />
+                <button type="button" (click)="sendLightboxCardReply()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl cursor-pointer whitespace-nowrap shadow-sm active:scale-95 transition-all flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[15px]">send</span>
+                  <span>Enviar</span>
+                </button>
+              </div>
+
+            } @else {
+              <!-- Estado sin comentarios aún -->
+              <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div class="flex items-center gap-2 text-white/70">
+                  <span class="material-symbols-outlined text-amber-400 text-[18px]">chat_bubble_outline</span>
+                  <span>Sin notas técnicas aún para esta imagen. ¿Deseas consultar algo a la empresa?</span>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                  <input 
+                    type="text"
+                    [(ngModel)]="lightboxCardReplyText"
+                    (keyup.enter)="sendLightboxCardReply()"
+                    placeholder="Escribir requerimiento técnico..."
+                    class="flex-grow sm:w-64 bg-[#0a0a0d] border border-white/30 focus:border-amber-400 rounded-xl px-3 py-1.5 text-white text-xs placeholder:text-white/40 focus:outline-none"
+                  />
+                  <button type="button" (click)="sendLightboxCardReply()" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl cursor-pointer whitespace-nowrap shadow-sm active:scale-95 transition-all">
+                    Enviar
+                  </button>
                 </div>
               </div>
             }
+
           </div>
 
-          <div class="flex items-center gap-2 shrink-0">
-            <button (click)="openDpNoteModal()" 
-                    class="px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 border"
-                    [class.bg-amber-500]="!!currentNote()"
-                    [class.border-amber-400]="!!currentNote()"
-                    [class.text-black]="!!currentNote()"
-                    [class.hover:bg-amber-400]="!!currentNote()"
-                    [class.bg-[#1c1c22]]="!currentNote()"
-                    [class.border-white/30]="!currentNote()"
-                    [class.text-white]="!currentNote()"
-                    [class.hover:bg-white]="!currentNote()"
-                    [class.hover:text-black]="!currentNote()">
-              <span class="material-symbols-outlined text-[18px]">edit_note</span>
-              <span>{{ currentNote() ? 'Ver / Responder Nota DP' : 'Añadir Nota de DP' }}</span>
-            </button>
-          </div>
         </div>
 
         <!-- MODAL INTERACTIVO DE NOTA DE DP CON CHAT SOCIAL DE RODAJE -->
@@ -895,24 +1019,79 @@ export class SelectedMediaComponent implements OnInit {
     this.isDownloadMenuOpen.update(v => !v);
   }
 
-  triggerDownload(card: SelectedCardItem, resolution: string) {
+  async triggerDownload(card: SelectedCardItem, resolution: string) {
     this.isDownloadMenuOpen.set(false);
     const suffix = resolution === '4k' ? '_4K_MASTER_RAW' : resolution === '1080p' ? '_1080p_FULLHD' : '_PROXY_WEBP';
     const filename = `${card.locationName.replace(/[^a-zA-Z0-9]/g, '_')}_${card.title.replace(/[^a-zA-Z0-9]/g, '_')}${suffix}.webp`;
     
+    if (!card.src) return;
+    this.favoritesService.triggerToast(`Iniciando descarga: ${filename}...`);
+
     try {
+      // 1. Fetch directo como blob
+      const response = await fetch(card.src, { mode: 'cors' });
+      if (!response.ok) throw new Error('CORS or network error');
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = card.src;
+      link.href = blobUrl;
       link.download = filename;
-      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      this.favoritesService.triggerToast(`Descargando ${resolution.toUpperCase()} (${filename})`);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+      this.favoritesService.triggerToast(`Descarga completada: ${filename}`);
+      return;
     } catch {
-      window.open(card.src, '_blank');
-      this.favoritesService.triggerToast(`Abriendo archivo para descarga`);
+      // 2. Fallback a HTML5 Canvas
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || 1920;
+          canvas.height = img.naturalHeight || 1080;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = filename.replace(/\.webp$/i, '.jpg');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+                this.favoritesService.triggerToast(`Descarga guardada: ${filename}`);
+                return;
+              }
+              this.fallbackDirectDownload(card.src, filename);
+            }, 'image/jpeg', 0.95);
+          } else {
+            this.fallbackDirectDownload(card.src, filename);
+          }
+        };
+        img.onerror = () => {
+          this.fallbackDirectDownload(card.src, filename);
+        };
+        img.src = card.src;
+      } catch {
+        this.fallbackDirectDownload(card.src, filename);
+      }
     }
+  }
+
+  private fallbackDirectDownload(url: string, filename: string) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    this.favoritesService.triggerToast(`Abriendo archivo para descarga: ${filename}`);
   }
 
   copyShareLink() {
@@ -1142,12 +1321,42 @@ export class SelectedMediaComponent implements OnInit {
     if (card) this.favoritesService.recordMediaClick(card.id);
   }
 
-  // DP Notes Modal & Chat Social
   public isDpNoteModalOpen = signal<boolean>(false);
   public noteInputText: string = '';
   public noteCategory = signal<string>('Lentes / Óptica');
   public noteAuthor: string = 'Director de Fotografía (DP)';
   public quickReplyText: string = '';
+  public lightboxCardReplyText: string = '';
+
+  sendLightboxCardReply() {
+    const cur = this.currentLightboxCard();
+    if (!cur || !this.lightboxCardReplyText || !this.lightboxCardReplyText.trim()) return;
+    
+    const existing = this.favoritesService.getNote(cur.id);
+    const author = sessionStorage.getItem('pfe_client_name') || 'Director de Fotografía (DP)';
+    const role = (sessionStorage.getItem('pfe_client_role') as any) || 'DP';
+
+    if (!existing) {
+      this.favoritesService.saveNote(
+        cur.id,
+        this.lightboxCardReplyText,
+        'General',
+        author,
+        {
+          locationName: cur.locationName,
+          mediaTitle: cur.title,
+          mediaThumbnailUrl: cur.src,
+          projectId: cur.projectId || ''
+        }
+      );
+      this.favoritesService.triggerToast('Requerimiento técnico registrado.');
+      this.lightboxCardReplyText = '';
+      return;
+    }
+
+    this.favoritesService.addReplyToNote(cur.id, this.lightboxCardReplyText, author, role);
+    this.lightboxCardReplyText = '';
+  }
 
   public currentNote = computed<DpNote | undefined>(() => {
     const cur = this.currentLightboxCard();

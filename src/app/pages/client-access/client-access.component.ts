@@ -148,8 +148,19 @@ export class ClientAccessComponent implements OnInit {
   async ngOnInit() {
     const codeParam = this.route.snapshot.queryParamMap.get('code');
     const projectId = this.route.snapshot.queryParamMap.get('project');
+    const tokenParam = this.route.snapshot.queryParamMap.get('token');
+    const clientParam = this.route.snapshot.queryParamMap.get('client');
+    const roleParam = this.route.snapshot.queryParamMap.get('role');
     const blockedNotice = this.route.snapshot.queryParamMap.get('blockedNotice');
     const requireAuth = this.route.snapshot.queryParamMap.get('requireAuth');
+
+    if (tokenParam) {
+      try {
+        sessionStorage.setItem('pfe_client_session_token', tokenParam);
+        if (clientParam) sessionStorage.setItem('pfe_client_name', clientParam);
+        if (roleParam) sessionStorage.setItem('pfe_client_role', roleParam);
+      } catch {}
+    }
 
     if (blockedNotice === 'unauthorized_project') {
       this.errorMessage = 'Acceso Restringido: Tu sesión actual no tiene autorización para ese proyecto. Ingresa el código asignado a esa producción.';
@@ -208,6 +219,25 @@ export class ClientAccessComponent implements OnInit {
       try {
         sessionStorage.setItem('pfe_client_auth_code', this.passcode.toUpperCase());
         sessionStorage.setItem('pfe_client_authorized_project_id', project.id);
+        
+        let sessionToken = sessionStorage.getItem('pfe_client_session_token');
+        if (!sessionToken) {
+          const existingToken = this.favoritesService.clientTokens().find(t => t.projectId === project.id || t.accessCode === project.accessCode);
+          if (existingToken) {
+            sessionToken = existingToken.token;
+          } else {
+            const created = this.favoritesService.createClientToken({
+              projectId: project.id,
+              projectTitle: project.title,
+              clientName: `Cliente Sesión Directa (${project.accessCode})`,
+              role: 'Cliente Acreditado',
+              accessCode: project.accessCode,
+              expiresInDays: 15
+            });
+            sessionToken = created.token;
+          }
+          sessionStorage.setItem('pfe_client_session_token', sessionToken);
+        }
       } catch {}
 
       this.favoritesService.triggerToast(`Acreditación aprobada para "${project.title}". Acceso concedido.`);
