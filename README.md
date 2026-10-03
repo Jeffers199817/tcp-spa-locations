@@ -184,4 +184,22 @@ src/app/
 
 ---
 
+## ☁️ Despliegue en Producción (Vercel)
+
+El proyecto incluye el archivo de configuración `vercel.json` optimizado para Angular SPA (Single Page Application):
+
+1. **Vincular el Repositorio de GitHub**:
+   - Ingresa a [Vercel](https://vercel.com/new).
+   - Importa el repositorio: `https://github.com/Jeffers199817/tcp-spa-locations`.
+2. **Configuración de Proyecto**:
+   - **Framework Preset**: Angular
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist/tcp-spa-locations/browser` *(ya viene configurado automáticamente en `vercel.json`)*
+3. **Variables de Entorno (Opcional si usas Supabase)**:
+   - Configura las variables de Supabase si deseas conectar a tu base de datos remota.
+4. **Deploy**:
+   - Haz clic en **Deploy**. ¡Tu plataforma estará lista en producción en menos de 2 minutos!
+
+---
+
 © 2026 PFE Locaciones — Producción y scouting de locaciones para cine y publicidad. Todos los derechos reservados.
