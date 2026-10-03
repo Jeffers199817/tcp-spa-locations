@@ -37,7 +37,7 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
               <div class="absolute left-0 mt-2 w-72 bg-surface-container-lowest rounded-xl shadow-xl border border-surface-container-high py-2 z-50 animate-in fade-in zoom-in-95">
                 <div class="px-3 py-1.5 border-b border-surface-container text-xs font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
                   <span>Proyectos Activos ({{ allProjects().length }})</span>
-                  <span class="text-[10px] text-primary">RLS Isolado</span>
+                  <span class="text-[10px] text-primary font-medium">Catálogo Privado</span>
                 </div>
                 @for (proj of allProjects(); track proj.id) {
                   <button (click)="selectProject(proj.id)" 
@@ -97,11 +97,11 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
             <span>Compartir con Código</span>
           </button>
 
-          <!-- Supabase Realtime Sync Indicator -->
+          <!-- Sincronización en vivo -->
           <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-low text-on-surface shrink-0" 
-               title="Sincronización WebSocket bidireccional activa">
-            <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-            <span class="font-label-md text-label-md text-on-surface-variant font-medium text-xs">Supabase Realtime</span>
+               title="Sincronización en tiempo real activa">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="font-label-md text-label-md text-on-surface-variant font-medium text-xs">En Vivo</span>
           </div>
 
           <div class="h-5 w-px bg-surface-container-highest hidden sm:block"></div>
@@ -147,7 +147,7 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
                   </div>
                   <div class="flex flex-col truncate">
                     <span class="font-bold text-xs text-on-surface">{{ isAdmin() ? 'Administrador PFE' : 'Cliente Autorizado' }}</span>
-                    <span class="text-[10px] text-on-surface-variant">Nodo PFE-01 • RLS Activo</span>
+                    <span class="text-[10px] text-on-surface-variant">Acceso Verificado • Privado</span>
                   </div>
                 </div>
 
@@ -158,7 +158,7 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
                   </div>
                   <div class="flex justify-between">
                     <span>Revisión:</span>
-                    <span class="font-semibold text-secondary">v{{ currentProject()?.revision }}.0 Inmutable</span>
+                    <span class="font-semibold text-secondary">v{{ currentProject()?.revision }}.0 Oficial</span>
                   </div>
                 </div>
 
@@ -238,7 +238,7 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
             Generando compilación en alta resolución con fichas técnicas, orientación solar, capacidad eléctrica y permisos municipales para <strong>{{ currentProjectTitle() }}</strong>.
           </p>
           <div class="p-3 bg-surface-container-low rounded-lg text-xs space-y-1">
-            <div class="flex justify-between font-medium"><span>Versión:</span><span class="font-bold">v2.1 Inmutable</span></div>
+            <div class="flex justify-between font-medium"><span>Versión:</span><span class="font-bold">v2.1 Oficial</span></div>
             <div class="flex justify-between font-medium"><span>Locaciones Incluidas:</span><span class="font-bold">3 Recintos</span></div>
             <div class="flex justify-between font-medium"><span>Activos Curados:</span><span class="font-bold">{{ favCount() }} Seleccionadas</span></div>
           </div>

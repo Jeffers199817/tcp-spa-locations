@@ -48,7 +48,7 @@ import { PfeFooterComponent } from '../../components/pfe-footer/pfe-footer.compo
               Acceso Exclusivo de Administrador
             </h1>
             <p class="text-xs text-on-surface-variant mt-1 max-w-sm">
-              Ingresa la Llave Maestra de Seguridad para gestionar proyectos, publicar revisiones inmutables y subir medios.
+              Ingresa la Llave Maestra de Seguridad para gestionar proyectos, publicar revisiones oficiales y subir medios.
             </p>
           </div>
 
