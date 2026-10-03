@@ -545,7 +545,6 @@ export class ProjectsService {
 
   constructor(private supabase: SupabaseService) {
     this.allProjects.set([this.p1, this.p2, this.p3, this.p4]);
-    this.currentProject.set(this.p1);
     this.checkInitialProjectFromSession();
   }
 

@@ -1,7 +1,7 @@
-import { Component, computed, signal, inject } from '@angular/core';
+import { Component, computed, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { ProjectsService } from '../../services/projects.service';
 import { FavoritesService } from '../../services/favorites.service';
 import { AdminAuthService } from '../../services/admin-auth.service';
@@ -76,7 +76,7 @@ interface EditableMedia {
               <span>Copiar Link Cliente</span>
             </button>
 
-            <a routerLink="/p/10000000-0000-4000-8000-000000000001" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors text-xs font-semibold shadow-xs">
+            <a [routerLink]="'/p/' + (project()?.id || '10000000-0000-4000-8000-000000000001')" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors text-xs font-semibold shadow-xs">
               <span class="material-symbols-outlined text-[16px]">visibility</span>
               <span class="hidden md:inline">Previsualizar</span> Cliente
             </a>
@@ -374,11 +374,12 @@ interface EditableMedia {
     </div>
   `
 })
-export class AdminProjectEditorComponent {
+export class AdminProjectEditorComponent implements OnInit {
   private projectsService = inject(ProjectsService);
   private favoritesService = inject(FavoritesService);
   private adminAuth = inject(AdminAuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   public project = computed(() => this.projectsService.currentProject());
   public lastToast = computed(() => this.favoritesService.lastToast());
@@ -473,18 +474,74 @@ export class AdminProjectEditorComponent {
     }
   ]);
 
+  ngOnInit() {
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('id');
+      if (id) {
+        const found = this.projectsService.selectProjectById(id) || this.projectsService.getProjectById(id);
+        if (found) {
+          this.activeRevision.set(found.revision || 1);
+          if (found.locations && found.locations.length > 0) {
+            this.locationsList.set(found.locations.map(l => ({
+              id: l.id,
+              name: l.title,
+              hasCover: !!l.coverUrl,
+              sections: (l.sections || []).map(s => ({
+                id: s.id,
+                name: s.title,
+                countText: `${s.media?.length || 0} medios`
+              }))
+            })));
+            this.activeLocId.set(found.locations[0].id);
+            if (found.locations[0].sections && found.locations[0].sections.length > 0) {
+              const sec0 = found.locations[0].sections[0];
+              this.activeSectionId.set(sec0.id);
+              this.activeSectionName.set(sec0.title);
+              this.mediaItems.set((sec0.media || []).map(m => ({
+                id: m.id,
+                title: m.title,
+                url: m.url || '',
+                specs: `${m.width}x${m.height} • ${m.mime}`,
+                isCover: false,
+                type: m.type as 'image' | 'video'
+              })));
+            }
+          }
+        }
+      }
+    });
+  }
+
   getActiveLocName(): string {
     const loc = this.locationsList().find(l => l.id === this.activeLocId());
-    return loc ? loc.name : 'Villa Moderna Pedregal';
+    return loc ? loc.name : 'Espacio Principal';
   }
 
   selectLoc(id: string) {
     this.activeLocId.set(id);
+    const p = this.project();
+    const loc = p?.locations?.find(l => l.id === id);
+    if (loc && loc.sections && loc.sections.length > 0) {
+      this.selectSection(loc.sections[0].id, loc.sections[0].title);
+    }
   }
 
   selectSection(id: string, name: string) {
     this.activeSectionId.set(id);
     this.activeSectionName.set(name);
+    const p = this.project();
+    const loc = p?.locations?.find(l => l.id === this.activeLocId());
+    const sec = loc?.sections?.find(s => s.id === id);
+    if (sec && sec.media) {
+      this.mediaItems.set(sec.media.map(m => ({
+        id: m.id,
+        title: m.title,
+        url: m.url || '',
+        specs: `${m.width}x${m.height} • ${m.mime}`,
+        isCover: false,
+        type: m.type as 'image' | 'video'
+      })));
+    }
   }
 
   setAsCover(id: string) {
@@ -501,12 +558,19 @@ export class AdminProjectEditorComponent {
   }
 
   saveDraft() {
-    this.favoritesService.triggerToast('Borrador guardado localmente y sincronizado en Supabase.');
+    this.favoritesService.triggerToast('Borrador y cambios del proyecto guardados exitosamente.');
   }
 
   publishRevision() {
-    this.activeRevision.update(v => v + 1);
-    this.favoritesService.triggerToast(`¡Revisión v${this.activeRevision()}.0 publicada como INMUTABLE! Lista para clientes.`);
+    const nextRev = this.activeRevision() + 1;
+    this.activeRevision.set(nextRev);
+    const p = this.project();
+    if (p) {
+      p.revision = nextRev;
+      p.publishedRevision = nextRev;
+      p.updatedAt = new Date().toISOString();
+    }
+    this.favoritesService.triggerToast(`¡Revisión v${nextRev}.0 publicada como INMUTABLE! Lista para clientes.`);
   }
 
   saveMetadata() {
@@ -514,8 +578,21 @@ export class AdminProjectEditorComponent {
   }
 
   addNewSection() {
-    const num = this.mediaItems().length + 1;
-    this.favoritesService.triggerToast('Nueva sección agregada al árbol.');
+    const p = this.project();
+    const loc = p?.locations?.find(l => l.id === this.activeLocId());
+    const newSecId = 'sec-' + Date.now();
+    const newSecTitle = `0${(loc?.sections?.length || 0) + 1}. Nueva Área de Rodaje`;
+    this.locationsList.update(list => list.map(l => {
+      if (l.id === this.activeLocId()) {
+        return {
+          ...l,
+          sections: [...l.sections, { id: newSecId, name: newSecTitle, countText: '0 medios' }]
+        };
+      }
+      return l;
+    }));
+    this.selectSection(newSecId, newSecTitle);
+    this.favoritesService.triggerToast(`Sección "${newSecTitle}" agregada.`);
   }
 
   addNewLocation() {

@@ -218,8 +218,8 @@ interface SelectedCardItem {
     @if (lightboxIdx() !== null && currentLightboxCard()) {
       <div class="fixed inset-0 z-50 flex flex-col justify-between bg-[#050505]/98 backdrop-blur-xl p-3 sm:p-5 animate-in fade-in select-none">
         
-        <!-- Header Controls -->
-        <div class="flex items-center justify-between text-white max-w-7xl mx-auto w-full z-20">
+        <!-- Header Controls (Barra de Control con Alto Contraste) -->
+        <div class="flex items-center justify-between text-white max-w-7xl mx-auto w-full z-20 bg-[#0c0c0e]/95 backdrop-blur-xl border border-white/25 p-2.5 sm:px-4 rounded-xl shadow-2xl">
           <div class="flex flex-col text-left">
             <div class="flex items-center gap-2">
               <span class="font-bold text-xs sm:text-sm text-primary uppercase tracking-wider">{{ currentLightboxCard()?.locationName }}</span>
@@ -229,11 +229,11 @@ interface SelectedCardItem {
             <h3 class="text-base sm:text-lg font-bold text-white mt-0.5 truncate max-w-md sm:max-w-xl">{{ currentLightboxCard()?.title }}</h3>
           </div>
 
-          <div class="flex items-center gap-2 sm:gap-3">
+          <div class="flex items-center gap-2 sm:gap-2.5">
             <!-- Multi-Resolution Download Dropdown -->
             <div class="relative">
               <button (click)="toggleDownloadMenu()" 
-                      class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                      class="px-3 py-1.5 rounded-lg bg-[#18181c] hover:bg-primary text-white border border-white/30 flex items-center gap-1.5 text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
                       title="Descargar en Varias Resoluciones">
                 <span class="material-symbols-outlined text-[16px]">download</span>
                 <span class="hidden sm:inline">Descargar</span>
@@ -241,19 +241,19 @@ interface SelectedCardItem {
               </button>
 
               @if (isDownloadMenuOpen()) {
-                <div class="absolute right-0 mt-2 w-56 bg-black/90 backdrop-blur-xl border border-white/20 rounded-xl p-2 shadow-2xl z-50 text-left text-xs animate-in fade-in zoom-in-95">
-                  <span class="text-[10px] text-white/50 uppercase tracking-wider font-bold block px-2 py-1">Formatos de Producción</span>
+                <div class="absolute right-0 mt-2 w-56 bg-[#121215] backdrop-blur-xl border-2 border-white/30 rounded-xl p-2 shadow-2xl z-50 text-left text-xs animate-in fade-in zoom-in-95">
+                  <span class="text-[10px] text-white/60 uppercase tracking-wider font-bold block px-2 py-1">Formatos de Producción</span>
                   <button (click)="triggerDownload(currentLightboxCard()!, '4k')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-white/10 text-white flex items-center justify-between cursor-pointer">
                     <span>4K Master RAW</span>
-                    <span class="text-[10px] text-white/60 font-mono">3840×2400</span>
+                    <span class="text-[10px] text-white/70 font-mono">3840×2400</span>
                   </button>
                   <button (click)="triggerDownload(currentLightboxCard()!, '1080p')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-white/10 text-white flex items-center justify-between cursor-pointer">
                     <span>Full HD 1080p</span>
-                    <span class="text-[10px] text-white/60 font-mono">1920×1200</span>
+                    <span class="text-[10px] text-white/70 font-mono">1920×1200</span>
                   </button>
                   <button (click)="triggerDownload(currentLightboxCard()!, 'proxy')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-white/10 text-white flex items-center justify-between cursor-pointer">
                     <span>Proxy WebP</span>
-                    <span class="text-[10px] text-white/60 font-mono">1280×800</span>
+                    <span class="text-[10px] text-white/70 font-mono">1280×800</span>
                   </button>
                 </div>
               }
@@ -261,7 +261,7 @@ interface SelectedCardItem {
 
             <!-- Zoom Toggle Level Button (1x -> 1.6x -> 2.5x) -->
             <button (click)="cycleZoom()" 
-                    class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 text-xs font-mono font-bold transition-all cursor-pointer"
+                    class="px-3 py-1.5 rounded-lg bg-[#18181c] hover:bg-primary text-white border border-white/30 flex items-center gap-1.5 text-xs font-mono font-bold transition-all shadow-md active:scale-95 cursor-pointer"
                     title="Alternar Nivel de Zoom 4K (Tecla Z)">
               <span class="material-symbols-outlined text-[16px]">zoom_in</span>
               <span>{{ zoomLevel() }}x</span>
@@ -269,7 +269,7 @@ interface SelectedCardItem {
 
             <!-- Fullscreen Native Mode -->
             <button (click)="toggleFullscreen()" 
-                    class="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+                    class="w-9 h-9 rounded-lg bg-[#18181c] hover:bg-primary text-white border border-white/30 flex items-center justify-center transition-all shadow-md active:scale-95 cursor-pointer"
                     title="Modo Pantalla Completa Cinematográfico (Tecla F)">
               <span class="material-symbols-outlined text-[18px]">
                 {{ isNativeFullscreen() ? 'fullscreen_exit' : 'fullscreen' }}
@@ -278,14 +278,16 @@ interface SelectedCardItem {
 
             <!-- Unselect button inside lightbox -->
             <button (click)="removeCard(currentLightboxCard()!.id, currentLightboxCard()!.title)" 
-                    class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                    class="px-3.5 py-1.5 rounded-lg bg-[#18181c] hover:bg-primary text-white border border-white/30 flex items-center gap-1.5 text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
                     title="Desmarcar de favoritos">
               <span class="material-symbols-outlined text-[18px] text-primary" style="font-variation-settings: 'FILL' 1;">bookmark</span>
               <span class="hidden sm:inline">Seleccionada</span>
             </button>
 
             <!-- Close button -->
-            <button (click)="closeLightbox()" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors cursor-pointer ml-1" title="Cerrar (Esc)">
+            <button (click)="closeLightbox()" 
+                    class="w-9 h-9 rounded-lg bg-[#18181c] hover:bg-rose-600 text-white border border-white/30 flex items-center justify-center transition-all shadow-md active:scale-95 cursor-pointer ml-1" 
+                    title="Cerrar (Esc)">
               <span class="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
@@ -296,9 +298,9 @@ interface SelectedCardItem {
           
           <!-- Prev Arrow -->
           <button (click)="prevLightbox()" 
-                  class="absolute left-2 sm:left-6 z-20 w-11 h-11 rounded-full bg-black/50 hover:bg-primary text-white flex items-center justify-center backdrop-blur-md transition-all shadow-xl active:scale-95 cursor-pointer"
+                  class="absolute left-2 sm:left-6 z-20 w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#0c0c0e]/95 hover:bg-primary text-white border-2 border-white/40 flex items-center justify-center backdrop-blur-md transition-all shadow-[0_4px_30px_rgba(0,0,0,0.9)] hover:scale-105 active:scale-95 cursor-pointer"
                   title="Anterior (Flecha Izquierda)">
-            <span class="material-symbols-outlined text-[24px]">chevron_left</span>
+            <span class="material-symbols-outlined text-[28px]">chevron_left</span>
           </button>
 
           <!-- Media Element Container with Dynamic Zoom -->
@@ -306,16 +308,16 @@ interface SelectedCardItem {
                [class.cursor-grab]="zoomLevel() > 1">
             <img [src]="currentLightboxCard()?.src" 
                  [alt]="currentLightboxCard()?.title" 
-                 class="max-h-[88vh] max-w-[94vw] object-contain rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] transition-transform duration-300 ease-out origin-center"
+                 class="max-h-[88vh] max-w-[94vw] object-contain rounded-lg shadow-[0_0_60px_rgba(0,0,0,0.9)] transition-transform duration-300 ease-out origin-center"
                  [style.transform]="'scale(' + zoomLevel() + ')'"
             />
           </div>
 
           <!-- Next Arrow -->
           <button (click)="nextLightbox()" 
-                  class="absolute right-2 sm:right-6 z-20 w-11 h-11 rounded-full bg-black/50 hover:bg-primary text-white flex items-center justify-center backdrop-blur-md transition-all shadow-xl active:scale-95 cursor-pointer"
+                  class="absolute right-2 sm:right-6 z-20 w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#0c0c0e]/95 hover:bg-primary text-white border-2 border-white/40 flex items-center justify-center backdrop-blur-md transition-all shadow-[0_4px_30px_rgba(0,0,0,0.9)] hover:scale-105 active:scale-95 cursor-pointer"
                   title="Siguiente (Flecha Derecha)">
-            <span class="material-symbols-outlined text-[24px]">chevron_right</span>
+            <span class="material-symbols-outlined text-[28px]">chevron_right</span>
           </button>
         </div>
 

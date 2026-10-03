@@ -118,8 +118,9 @@ import { PfeLogoComponent } from '../../components/pfe-logo/pfe-logo.component';
 
             <!-- Mode Switcher -->
             <div class="flex items-center bg-surface-container-low p-1 rounded-lg text-xs">
-              <a routerLink="/p/10000000-0000-4000-8000-000000000001" class="px-2.5 py-1 rounded font-label-md text-label-md text-on-surface-variant hover:text-on-surface font-medium transition-colors">
-                Vista Cliente
+              <a [routerLink]="activeClientUrl()" class="px-2.5 py-1 rounded font-label-md text-label-md text-on-surface-variant hover:text-on-surface font-medium transition-colors flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px]">visibility</span>
+                <span>Vista Cliente</span>
               </a>
               <span class="px-2.5 py-1 rounded font-label-md text-label-md bg-surface-container-lowest text-on-surface shadow-xs font-bold">
                 Admin
@@ -477,6 +478,14 @@ export class AdminDashboardComponent {
   public newProjectCode: string = 'LOC-2026-N';
   public newProjectLead: string = 'Mateo Valenzuela';
   public newProjectDescription: string = '';
+
+  public activeClientUrl = computed(() => {
+    const curr = this.projectsService.currentProject();
+    if (curr) {
+      return `/p/${curr.id}?code=${curr.accessCode}`;
+    }
+    return '/p/10000000-0000-4000-8000-000000000001?code=LOC-2026-X';
+  });
 
   public publishedCount = computed(() => {
     return this.projects().filter(p => p.status === 'published').length;

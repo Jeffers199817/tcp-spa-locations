@@ -15,13 +15,20 @@ import { PfeLogoComponent } from '../../components/pfe-logo/pfe-logo.component';
   template: `
     <div class="min-h-screen flex flex-col justify-between bg-surface font-body-md text-on-surface antialiased">
       
-      <!-- Top mini-bar (100% Client Clean - Sin Enlaces de Admin) -->
+      <!-- Top mini-bar con acceso claro a Admin y Cliente -->
       <div class="w-full py-3.5 px-6 flex items-center justify-between border-b border-surface-container-high/60 bg-surface-container-lowest/80 backdrop-blur-sm">
         <app-pfe-logo size="sm"></app-pfe-logo>
         
-        <div class="flex items-center gap-2 text-xs text-on-surface-variant font-medium">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Portal Privado de Locaciones</span>
+        <div class="flex items-center gap-3">
+          <div class="hidden sm:flex items-center gap-2 text-xs text-on-surface-variant font-medium">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Portal de Locaciones</span>
+          </div>
+          <a routerLink="/admin/login" 
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-all border border-surface-container-high shadow-xs cursor-pointer">
+            <span class="material-symbols-outlined text-[16px] text-primary">admin_panel_settings</span>
+            <span>Acceso Administrador</span>
+          </a>
         </div>
       </div>
 
