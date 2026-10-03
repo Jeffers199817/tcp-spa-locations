@@ -1,219 +1,559 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, computed, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ProjectsService } from '../../services/projects.service';
+import { FavoritesService } from '../../services/favorites.service';
+import { AdminAuthService } from '../../services/admin-auth.service';
+import { PfeFooterComponent } from '../../components/pfe-footer/pfe-footer.component';
+import { PfeLogoComponent } from '../../components/pfe-logo/pfe-logo.component';
+
+interface EditableMedia {
+  id: string;
+  title: string;
+  url: string;
+  specs: string;
+  isCover: boolean;
+  type: 'image' | 'video';
+}
 
 @Component({
   selector: 'app-admin-project-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule, PfeFooterComponent, PfeLogoComponent],
   template: `
-    <!-- Header Editor -->
-    <header class="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/95 backdrop-blur-md shadow-sm border-b border-surface-container-high">
-      <div class="h-16 w-full max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <button (click)="goBack()" class="flex items-center gap-1.5 text-on-surface hover:text-primary font-bold text-xs cursor-pointer">
-            <span class="material-symbols-outlined text-lg">arrow_back</span>
-            <span>Dashboard</span>
-          </button>
-          <div class="h-5 w-px bg-surface-container-highest"></div>
-          <span class="text-sm font-bold text-on-surface truncate max-w-xs">{{ project()?.title }}</span>
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 uppercase">
-            Modo Edición
-          </span>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <button (click)="publishRevision()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm hover:brightness-105 transition-all cursor-pointer">
-            <span class="material-symbols-outlined text-base">publish</span>
-            <span>Publicar Revisión v{{ (project()?.revision || 1) + 1 }}.0</span>
-          </button>
-          <button (click)="previewAsClient()" class="px-3 py-2 bg-surface-container text-on-surface rounded-lg text-xs font-semibold hover:bg-surface-container-high transition-colors flex items-center gap-1 cursor-pointer">
-            <span class="material-symbols-outlined text-sm">visibility</span>
-            <span>Ver como Cliente</span>
-          </button>
-        </div>
+    <div class="bg-surface font-body-md text-on-surface antialiased min-h-screen flex flex-col">
+      
+      <!-- Toast Notifier -->
+      <div class="fixed top-20 right-6 z-50 transform transition-all duration-300 pointer-events-none flex items-center gap-2.5 bg-inverse-surface text-inverse-on-surface px-4 py-2.5 rounded-lg shadow-xl text-xs font-semibold border border-white/10"
+           [class.translate-y-[-20px]]="!lastToast().visible"
+           [class.opacity-0]="!lastToast().visible"
+           [class.translate-y-0]="lastToast().visible"
+           [class.opacity-100]="lastToast().visible">
+        <span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+        <span>{{ lastToast().message }}</span>
       </div>
-    </header>
 
-    <main class="w-full pt-16 min-h-screen bg-surface flex flex-col md:flex-row">
-      <!-- PANEL LATERAL: Árbol de Estructura -->
-      <aside class="w-full md:w-80 bg-surface-container-low border-r border-surface-container-high p-4 flex flex-col gap-4 text-left">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-on-surface uppercase tracking-wider">Estructura del Proyecto</span>
-          <button (click)="addLocation()" class="text-xs text-primary font-bold hover:underline flex items-center gap-0.5 cursor-pointer">
-            <span class="material-symbols-outlined text-sm">add</span>
-            <span>Nueva Locación</span>
-          </button>
-        </div>
-
-        <!-- Lista de Locaciones -->
-        <div class="space-y-3 overflow-y-auto max-h-[calc(100vh-140px)]">
-          <div *ngFor="let loc of project()?.locations; let i = index" class="p-3 bg-surface-container-lowest rounded-xl shadow-xs border border-outline/10">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-extrabold text-on-surface">LOC #0{{ i + 1 }}: {{ loc.title }}</span>
-              <span class="text-[10px] text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded">{{ loc.sections.length }} Sec.</span>
-            </div>
-
-            <!-- Subsecciones -->
-            <div class="pl-2 space-y-1.5 border-l-2 border-primary/30">
-              <div *ngFor="let sec of loc.sections" class="p-1.5 rounded-lg bg-surface-container-low/70 hover:bg-surface-container text-xs text-on-surface flex items-center justify-between cursor-pointer">
-                <span class="truncate font-medium">{{ sec.title }}</span>
-                <span class="text-[10px] text-on-surface-variant font-mono">{{ sec.media?.length || 0 }} fotos</span>
+      <!-- Top Header de Edición de Proyecto -->
+      <header class="fixed top-0 left-0 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur-md shadow-sm border-b border-surface-container-high px-4 sm:px-6 lg:px-8 py-3">
+        <div class="max-w-[1680px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
+          
+          <div class="flex items-center gap-3">
+            <app-pfe-logo size="sm" [showText]="false" linkTo="/admin"></app-pfe-logo>
+            <div class="h-5 w-px bg-surface-container-highest"></div>
+            <a routerLink="/admin" class="flex items-center gap-1.5 text-on-surface hover:text-primary font-bold text-xs transition-colors cursor-pointer">
+              <span class="material-symbols-outlined text-lg">arrow_back</span>
+              <span class="hidden sm:inline">Panel Admin</span>
+            </a>
+            <div class="h-5 w-px bg-surface-container-highest"></div>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-2">
+                <span class="font-label-md text-label-md uppercase tracking-wider text-secondary font-bold text-[10px]">
+                  Proyecto: {{ project()?.accessCode || 'LOC-2026-X' }}
+                </span>
+                <span class="inline-flex items-center gap-1 px-2 py-0.2 rounded-full bg-primary-fixed text-on-primary-fixed text-[10px] font-bold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                  Borrador (Revisión {{ activeRevision() }}.0)
+                </span>
               </div>
+              <h1 class="text-base sm:text-lg font-extrabold text-on-surface truncate">
+                {{ project()?.title || 'Campaña Global Verano 2026' }}
+              </h1>
             </div>
-
-            <button (click)="addSection(loc)" class="mt-2 text-[11px] text-secondary hover:text-primary font-semibold flex items-center gap-1 w-full justify-center py-1 rounded bg-surface-container-low cursor-pointer">
-              <span class="material-symbols-outlined text-xs">add</span>
-              <span>Añadir Sección</span>
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <!-- ÁREA DE TRABAJO: Carga de Medios y Gestión -->
-      <section class="flex-1 p-6 md:p-8 text-left overflow-y-auto">
-        <div class="max-w-5xl mx-auto space-y-6">
-          <!-- Zona Drag & Drop para Fotos y Videos -->
-          <div class="p-8 bg-surface-container-lowest rounded-2xl border-2 border-dashed border-primary/40 text-center hover:border-primary transition-colors cursor-pointer" (click)="fileInput.click()">
-            <input #fileInput type="file" multiple accept="image/*,video/mp4" (change)="onFilesSelected($event)" class="hidden">
-            <div class="w-12 h-12 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center mb-3">
-              <span class="material-symbols-outlined text-2xl">cloud_upload</span>
-            </div>
-            <h3 class="text-base font-bold text-on-surface">Arrastra fotos en alta resolución o videos MP4</h3>
-            <p class="text-xs text-on-surface-variant mt-1">
-              Soporta JPG, PNG, WebP y MP4 hasta 50MB. Los archivos se optimizan y se guardan directamente en Supabase Storage.
-            </p>
-            <button type="button" class="mt-4 px-4 py-2 bg-primary text-on-primary text-xs font-bold rounded-lg shadow-sm hover:brightness-105 pointer-events-none">
-              Seleccionar Archivos desde el Equipo
-            </button>
           </div>
 
-          <!-- Feedback de Archivos Subidos -->
-          <div *ngIf="uploadCount() > 0" class="p-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs flex items-center justify-between">
-            <span class="font-semibold flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-sm">check_circle</span>
-              Se subieron {{ uploadCount() }} nuevos activos correctamente a Supabase.
+          <!-- Action buttons top -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Access Code Badge -->
+            <span class="font-mono text-xs px-2.5 py-1.5 rounded-lg bg-surface-container-low border border-surface-container-high text-on-surface font-bold flex items-center gap-1.5 shadow-xs" title="Código de Acceso Privado">
+              <span class="material-symbols-outlined text-[15px] text-primary">key</span>
+              <span>{{ project()?.accessCode || 'LOC-2026-X' }}</span>
             </span>
-            <span class="text-[11px]">Revisión actualizada</span>
+
+            <!-- Direct Client Link with Code -->
+            <button (click)="copyClientLink()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary/10 hover:bg-secondary/20 text-secondary font-bold text-xs transition-colors shadow-xs cursor-pointer" title="Copiar enlace directo con código para cliente">
+              <span class="material-symbols-outlined text-[16px]">link</span>
+              <span>Copiar Link Cliente</span>
+            </button>
+
+            <a routerLink="/p/10000000-0000-4000-8000-000000000001" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors text-xs font-semibold shadow-xs">
+              <span class="material-symbols-outlined text-[16px]">visibility</span>
+              <span class="hidden md:inline">Previsualizar</span> Cliente
+            </a>
+            
+            <button (click)="saveDraft()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-xs font-semibold shadow-xs cursor-pointer" type="button">
+              <span class="material-symbols-outlined text-[16px]">save</span>
+              <span>Guardar</span>
+            </button>
+            
+            <button (click)="publishRevision()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary-container active:scale-[0.98] transition-all text-xs font-bold shadow-sm shadow-primary/20 cursor-pointer" type="button">
+              <span class="material-symbols-outlined text-[18px]">verified</span>
+              <span>Publicar v{{ activeRevision() + 1 }}.0</span>
+            </button>
           </div>
 
-          <!-- Activos en la Locación Actual -->
-          <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline/10">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="text-lg font-bold text-on-surface">Activos en Villa Moderna Pedregal</h3>
-                <p class="text-xs text-on-surface-variant">Reordena o establece la fotografía de portada principal.</p>
-              </div>
-              <span class="text-xs text-on-surface-variant font-medium">6 Medios Activos</span>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              <div class="relative rounded-xl overflow-hidden bg-surface-container group border border-outline/10">
-                <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80" class="w-full h-32 object-cover">
-                <div class="p-2 bg-surface-container-lowest text-[11px] font-semibold text-on-surface truncate">
-                  Vista Frontal
-                </div>
-                <div class="absolute top-2 left-2 bg-primary text-on-primary text-[9px] font-bold px-1.5 py-0.5 rounded">
-                  PORTADA
-                </div>
-              </div>
-
-              <div class="relative rounded-xl overflow-hidden bg-surface-container group border border-outline/10">
-                <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=400&q=80" class="w-full h-32 object-cover">
-                <div class="p-2 bg-surface-container-lowest text-[11px] font-semibold text-on-surface truncate">
-                  Detalle Puerta
-                </div>
-              </div>
-
-              <div class="relative rounded-xl overflow-hidden bg-surface-container group border border-outline/10">
-                <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=400&q=80" class="w-full h-32 object-cover">
-                <div class="p-2 bg-surface-container-lowest text-[11px] font-semibold text-on-surface truncate">
-                  Salón Principal
-                </div>
-              </div>
-
-              <div class="relative rounded-xl overflow-hidden bg-surface-container group border border-outline/10">
-                <img src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=400&q=80" class="w-full h-32 object-cover">
-                <div class="p-2 bg-surface-container-lowest text-[11px] font-semibold text-on-surface truncate">
-                  Tragaluz
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-      </section>
-    </main>
+      </header>
+
+      <!-- Main Layout: 3 Columnas Asimétricas (3 / 6 / 3) -->
+      <main class="w-full pt-20 px-4 sm:px-6 lg:px-8 py-6 flex-grow max-w-[1680px] mx-auto text-left">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg items-start">
+          
+          <!-- ==================== COLUMNA 1: Árbol Jerárquico de Locaciones (3 cols) ==================== -->
+          <div class="xl:col-span-3 flex flex-col gap-space-md bg-surface-container-lowest p-space-md rounded-xl shadow-sm border border-surface-container-high">
+            <div class="flex items-center justify-between pb-space-xs border-b border-surface-container pb-2">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary text-[20px]">account_tree</span>
+                <h2 class="font-headline-sm text-sm font-bold text-on-surface">Estructura</h2>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-spec-numeral text-[11px] font-bold">
+                {{ locationsList().length }} Locaciones
+              </span>
+            </div>
+
+            <!-- Locations Tree -->
+            <div class="flex flex-col gap-2">
+              @for (loc of locationsList(); track loc.id; let lIdx = $index) {
+                <div class="flex flex-col rounded-lg p-2.5 gap-2 transition-colors border"
+                     [class.bg-surface-container-low]="activeLocId() === loc.id"
+                     [class.border-secondary/30]="activeLocId() === loc.id"
+                     [class.bg-surface-container-lowest]="activeLocId() !== loc.id"
+                     [class.border-transparent]="activeLocId() !== loc.id">
+                  
+                  <div (click)="selectLoc(loc.id)" class="flex items-center justify-between cursor-pointer">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="material-symbols-outlined text-[18px]" [class.text-primary]="loc.hasCover" [class.text-on-surface-variant]="!loc.hasCover">
+                        domain
+                      </span>
+                      <span class="font-label-lg text-xs font-bold text-on-surface truncate">{{ loc.name }}</span>
+                    </div>
+                    @if (loc.hasCover) {
+                      <span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;" title="Portada Asignada">star</span>
+                    }
+                  </div>
+
+                  <!-- Secciones anidadas -->
+                  @if (activeLocId() === loc.id) {
+                    <div class="flex flex-col gap-1 pl-4 pt-1 animate-in fade-in">
+                      @for (sec of loc.sections; track sec.id) {
+                        <button (click)="selectSection(sec.id, sec.name)" 
+                                class="w-full text-left flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer"
+                                [class.bg-surface-container-highest]="activeSectionId() === sec.id"
+                                [class.text-on-surface]="activeSectionId() === sec.id"
+                                [class.font-bold]="activeSectionId() === sec.id"
+                                [class.shadow-xs]="activeSectionId() === sec.id"
+                                [class.text-on-surface-variant]="activeSectionId() !== sec.id"
+                                [class.hover:bg-surface-container]="activeSectionId() !== sec.id">
+                          <div class="flex items-center gap-1.5 truncate pr-1">
+                            <span class="material-symbols-outlined text-[16px]" [class.text-primary]="activeSectionId() === sec.id">
+                              {{ activeSectionId() === sec.id ? 'folder_open' : 'folder' }}
+                            </span>
+                            <span class="truncate">{{ sec.name }}</span>
+                          </div>
+                          <span class="font-label-md text-[10px] font-mono shrink-0">{{ sec.countText }}</span>
+                        </button>
+                      }
+
+                      <button (click)="addNewSection()" class="flex items-center gap-1.5 px-2.5 py-1 text-secondary hover:text-on-secondary-fixed text-xs font-semibold transition-colors mt-1 cursor-pointer" type="button">
+                        <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                        <span>Añadir Sección</span>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <button (click)="addNewLocation()" class="mt-2 w-full flex items-center justify-center gap-2 py-2 px-space-md rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors font-semibold text-xs cursor-pointer" type="button">
+              <span class="material-symbols-outlined text-[18px]">add</span>
+              <span>Añadir Nueva Locación</span>
+            </button>
+
+            <!-- Supabase Storage Status Indicator -->
+            <div class="mt-space-md p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1.5 border border-surface-container-high">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-label-md text-on-surface-variant font-medium">Storage Bucket</span>
+                <span class="inline-flex items-center gap-1 font-semibold text-tertiary font-mono">
+                  <span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
+                  locations-media
+                </span>
+              </div>
+              <div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+                <div class="bg-secondary h-full rounded-full transition-all" style="width: 42%;"></div>
+              </div>
+              <span class="text-[11px] text-on-surface-variant text-right font-mono">4.2 GB de 10 GB</span>
+            </div>
+          </div>
+
+          <!-- ==================== COLUMNA 2: Espacio de Trabajo & Gestor de Medios (6 cols) ==================== -->
+          <div class="xl:col-span-6 flex flex-col gap-space-lg">
+            
+            <!-- Breadcrumbs & Active Title -->
+            <div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm border border-surface-container-high flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
+              <div class="flex flex-col">
+                <div class="flex items-center gap-1 text-on-surface-variant text-xs">
+                  <span>{{ getActiveLocName() }}</span>
+                  <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+                  <span class="text-on-surface font-semibold">{{ activeSectionName() }}</span>
+                </div>
+                <span class="font-headline-md text-base sm:text-lg font-bold text-on-surface mt-0.5">
+                  {{ activeSectionName() }}
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button (click)="notifyInfo('Configuración avanzada de la sección')" class="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant cursor-pointer" title="Configuración de sección" type="button">
+                  <span class="material-symbols-outlined text-[18px]">tune</span>
+                </button>
+                <span class="font-label-md text-xs px-2.5 py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-bold">
+                  {{ mediaItems().length }} Archivos
+                </span>
+              </div>
+            </div>
+
+            <!-- Zona Drag and Drop con Barra de Carga -->
+            <div (click)="fileInput.click()" 
+                 class="relative group bg-surface-container-lowest rounded-xl p-space-lg shadow-sm border-2 border-dashed border-primary/30 hover:border-primary transition-all cursor-pointer flex flex-col items-center justify-center text-center">
+              <input #fileInput type="file" multiple accept="image/*,video/mp4" (change)="onFilesSelected($event)" class="hidden">
+              <div class="w-14 h-14 rounded-full bg-primary-fixed flex items-center justify-center text-primary mb-space-sm group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined text-[28px]">cloud_upload</span>
+              </div>
+              <span class="font-headline-sm text-sm font-bold text-on-surface">
+                Arrastre fotografías de scouting o archivos MP4 aquí
+              </span>
+              <p class="font-body-sm text-xs text-on-surface-variant max-w-md mt-1">
+                Optimización automática a WebP 4K y compresión ProRes Proxy para streaming fluido. Supabase Storage Bucket activo.
+              </p>
+
+              <!-- Uploading bar simulation -->
+              @if (isUploading()) {
+                <div class="w-full max-w-sm mt-4 p-2 bg-surface-container-low rounded-lg animate-in fade-in">
+                  <div class="flex justify-between text-[11px] font-semibold text-primary mb-1">
+                    <span>Cargando en Supabase...</span>
+                    <span>{{ uploadProgress() }}%</span>
+                  </div>
+                  <div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-primary h-full rounded-full transition-all duration-200" [style.width.%]="uploadProgress()"></div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Grilla de Medios Gestionables -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+              @for (item of mediaItems(); track item.id; let mIdx = $index) {
+                <div class="group relative flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm border border-surface-container-high hover:shadow-md transition-all">
+                  
+                  <div class="relative aspect-[16/10] overflow-hidden bg-surface-container-low">
+                    <img [src]="item.url" [alt]="item.title" class="w-full h-full object-cover"/>
+                    
+                    <!-- Cover Badge -->
+                    @if (item.isCover) {
+                      <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-primary text-white text-[10px] font-bold shadow-sm flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[12px]">star</span>
+                        Portada
+                      </span>
+                    }
+
+                    <!-- Top right actions -->
+                    <div class="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm p-1 rounded-lg">
+                      <button (click)="setAsCover(item.id)" class="text-white hover:text-primary transition-colors p-1" title="Definir como Portada">
+                        <span class="material-symbols-outlined text-[16px]">bookmark</span>
+                      </button>
+                      <button (click)="deleteMedia(item.id)" class="text-white hover:text-error transition-colors p-1" title="Eliminar de la galería">
+                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="p-3 flex items-center justify-between text-xs">
+                    <div class="flex flex-col truncate pr-2">
+                      <span class="font-bold text-on-surface truncate">{{ item.title }}</span>
+                      <span class="text-[10px] text-on-surface-variant font-mono">{{ item.specs }}</span>
+                    </div>
+                    <span class="material-symbols-outlined text-on-surface-variant/40 cursor-grab" title="Arrastrar para ordenar">drag_indicator</span>
+                  </div>
+
+                </div>
+              }
+            </div>
+
+          </div>
+
+          <!-- ==================== COLUMNA 3: Panel de Metadatos Técnicos (3 cols) ==================== -->
+          <div class="xl:col-span-3 flex flex-col gap-space-md bg-surface-container-lowest p-space-md rounded-xl shadow-sm border border-surface-container-high">
+            <div class="flex items-center gap-2 pb-2 border-b border-surface-container">
+              <span class="material-symbols-outlined text-primary text-[20px]">tune</span>
+              <h3 class="font-headline-sm text-sm font-bold text-on-surface">Ficha Técnica del Set</h3>
+            </div>
+
+            <form (ngSubmit)="saveMetadata()" class="space-y-3 text-xs">
+              <div>
+                <label class="block font-bold text-on-surface mb-1">Nombre del Espacio *</label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="activeSectionName" 
+                  name="secName"
+                  class="w-full h-9 px-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary font-semibold"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-on-surface mb-1">Metros Cuadrados Útiles (m²)</label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="metaDimensions" 
+                  name="metaDimensions"
+                  placeholder="Ej: 450 m² libres"
+                  class="w-full h-9 px-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-on-surface mb-1">Altura Libre de Techo (m)</label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="metaCeiling" 
+                  name="metaCeiling"
+                  placeholder="Ej: 5.0m a cumbrera"
+                  class="w-full h-9 px-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-on-surface mb-1">Acometida Eléctrica</label>
+                <select 
+                  [(ngModel)]="metaPower" 
+                  name="metaPower"
+                  class="w-full h-9 px-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary">
+                  <option value="Trifásica 80A">Trifásica 80A (Industrial Media)</option>
+                  <option value="Trifásica 125A">Trifásica 125A (Set Pesado)</option>
+                  <option value="Trifásica 63A">Trifásica 63A</option>
+                  <option value="Monofásica 40A">Monofásica 40A Doméstica</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block font-bold text-on-surface mb-1">Nivel Acústico / Sonido</label>
+                <select 
+                  [(ngModel)]="metaSound" 
+                  name="metaSound"
+                  class="w-full h-9 px-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary">
+                  <option value="Direct Sound OK">Direct Sound OK (Aislamiento Total)</option>
+                  <option value="Control Acústico 8/10">Control Acústico 8/10 (Moderado)</option>
+                  <option value="Ruido de Fondo Alto">Ruido de Fondo Alto (Requiere Foley)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block font-bold text-on-surface mb-1">Permisos Municipales & Restricciones</label>
+                <textarea 
+                  [(ngModel)]="metaPermits" 
+                  name="metaPermits"
+                  rows="3" 
+                  placeholder="Filming permit CDMX aprobado, estacionamiento para 3 camiones 10T..."
+                  class="w-full p-2.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant focus:outline-none focus:border-primary text-xs"
+                ></textarea>
+              </div>
+
+              <button 
+                type="submit" 
+                class="w-full h-10 bg-primary text-on-primary font-bold rounded-lg shadow-sm hover:brightness-105 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-2"
+              >
+                <span class="material-symbols-outlined text-[18px]">check</span>
+                <span>Guardar Especificaciones</span>
+              </button>
+            </form>
+          </div>
+
+        </div>
+      </main>
+
+      <!-- Professional Footer -->
+      <app-pfe-footer></app-pfe-footer>
+
+    </div>
   `
 })
 export class AdminProjectEditorComponent {
   private projectsService = inject(ProjectsService);
+  private favoritesService = inject(FavoritesService);
+  private adminAuth = inject(AdminAuthService);
   private router = inject(Router);
 
-  project = this.projectsService.currentProject;
-  uploadCount = signal<number>(0);
+  public project = computed(() => this.projectsService.currentProject());
+  public lastToast = computed(() => this.favoritesService.lastToast());
 
-  constructor() {}
-
-  addLocation() {
-    const title = prompt('Nombre de la nueva locación:');
-    if (!title) return;
-
+  copyClientLink() {
     const p = this.project();
-    if (p && p.locations) {
-      p.locations.push({
-        id: `loc-${Date.now()}`,
-        title: title,
-        description: 'Nueva locación añadida',
-        order: p.locations.length,
-        coverMediaId: null,
-        coverUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
-        sections: []
-      });
+    const id = p?.id || '10000000-0000-4000-8000-000000000001';
+    const code = p?.accessCode || 'LOC-2026-X';
+    const link = `${window.location.origin}/p/${id}?code=${code}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link);
     }
+    this.favoritesService.triggerToast(`Enlace directo con código para cliente copiado al portapapeles.`);
   }
 
-  addSection(loc: any) {
-    const title = prompt(`Nombre de la sección para ${loc.title}:`);
-    if (!title) return;
+  public activeRevision = signal<number>(2);
+  public activeLocId = signal<string>('loc-1');
+  public activeSectionId = signal<string>('sec-2');
+  public activeSectionName = signal<string>('02. Living Principal & Cocina');
 
-    loc.sections.push({
-      id: `sec-${Date.now()}`,
-      title: title,
-      description: 'Espacio técnico',
-      order: loc.sections.length,
-      details: [],
-      mediaIds: [],
-      media: []
-    });
+  public metaDimensions: string = '450 m² libres';
+  public metaCeiling: string = '5.0m a plafón';
+  public metaPower: string = 'Trifásica 80A';
+  public metaSound: string = 'Direct Sound OK';
+  public metaPermits: string = 'Permiso de rodaje CDMX en regla. Cierre parcial de calle coordinado.';
+
+  public isUploading = signal<boolean>(false);
+  public uploadProgress = signal<number>(0);
+
+  public locationsList = signal([
+    {
+      id: 'loc-1',
+      name: 'Villa Moderna Pedregal',
+      hasCover: true,
+      sections: [
+        { id: 'sec-1', name: '01. Fachada & Entrada', countText: '4 fotos' },
+        { id: 'sec-2', name: '02. Living & Cocina', countText: '6 f / 1 v' },
+        { id: 'sec-3', name: '03. Terrazas & Alberca', countText: '2 fotos' }
+      ]
+    },
+    {
+      id: 'loc-2',
+      name: 'Hangar Industrial San Telmo',
+      hasCover: false,
+      sections: [
+        { id: 'sec-4', name: '01. Nave Principal', countText: '2 fotos' },
+        { id: 'sec-5', name: '02. Mezzanine', countText: '1 foto' }
+      ]
+    },
+    {
+      id: 'loc-3',
+      name: 'Casa Colonial Coyoacán',
+      hasCover: false,
+      sections: [
+        { id: 'sec-6', name: '01. Patio de Arcos', countText: '1 foto' }
+      ]
+    }
+  ]);
+
+  public mediaItems = signal<EditableMedia[]>([
+    {
+      id: 'em-1',
+      title: 'Salón Principal & Estanque',
+      url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDm6rC8AUnQx1TpaKQ47eqzWwB9WoyNbRLfdOa6Yd-_FeV8173wmRqe1_uoZVCCYHZThznl6Rk6zUr3O4lAOLsWpSpDwjs_XY0L9yIm1vgUInRa9vJXVdyzxC32Ku5N8VGeeAwMGKQLDzvyB3-oCrpc3zZavpPrK_AJFnUb1dEA0Sayhmv5Qhmk485Al4QavEWAmhdb2eugeZeusbvJuFBioENo3yz1EmCLgMAoP9qoSqMW21m4w501',
+      specs: '4K WebP • 24mm • f/2.8',
+      isCover: true,
+      type: 'image'
+    },
+    {
+      id: 'em-2',
+      title: 'Galería de Concreto & Tragaluz',
+      url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDe7k0BeMVrh_AzDXykrDAgC5nslus1lOvPKMjyES3bj0OlMI74DKNSLW0XP7b9rFU_g6wDeBvVE0_OsQd5y4mM1Hpih5MuVz6Fvqg4ZQCPWHfJzCVmkZklLqqYoDlAYySIPsRBANm0sHcyT1jOjM6JOeJGR2aUSQwHRz7AuirQKu0pcVVCUV-Ufb76dImB-eBDiUZA9v0X59YO6ZQ-lbdBIgmNfjt0YRQuLF-ZXnOQdoN85nnevxH3',
+      specs: '4K WebP • 35mm • Cenital',
+      isCover: false,
+      type: 'image'
+    },
+    {
+      id: 'em-3',
+      title: 'Barra Isla y Mármol Negro',
+      url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuANTRn6Jabv7G8DI7CBT0y6qx6nPZ8MZBCcehfzRcyyXqcU3XAOW7Tnh5OjtNl5OlOqG3u2pRWa9E3VX--sUhHQTgKNaiD2qd-Ypgs6yp_j3d_rBNaXRukeYfOYOZzt4vhl5jrddCz9Zll8dsNZQlK6JlC2ZgiT1006bDOz_bJMtHhEHpIQSatKqy-oEdklHP-4IkWiD6NAoy2sxru6l4EM84fdaySHUCu0lhMynfAHO1nOV4_usEH4',
+      specs: '4K WebP • 50mm • f/1.4',
+      isCover: false,
+      type: 'image'
+    },
+    {
+      id: 'em-4',
+      title: 'Clip de Steadycam Sala y Jardín',
+      url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80',
+      specs: 'MP4 ProRes Proxy • 00:45',
+      isCover: false,
+      type: 'video'
+    }
+  ]);
+
+  getActiveLocName(): string {
+    const loc = this.locationsList().find(l => l.id === this.activeLocId());
+    return loc ? loc.name : 'Villa Moderna Pedregal';
+  }
+
+  selectLoc(id: string) {
+    this.activeLocId.set(id);
+  }
+
+  selectSection(id: string, name: string) {
+    this.activeSectionId.set(id);
+    this.activeSectionName.set(name);
+  }
+
+  setAsCover(id: string) {
+    this.mediaItems.update(list => list.map(item => ({
+      ...item,
+      isCover: item.id === id
+    })));
+    this.favoritesService.triggerToast('Portada asignada a la sección correctamente.');
+  }
+
+  deleteMedia(id: string) {
+    this.mediaItems.update(list => list.filter(item => item.id !== id));
+    this.favoritesService.triggerToast('Archivo eliminado de Supabase Storage.');
+  }
+
+  saveDraft() {
+    this.favoritesService.triggerToast('Borrador guardado localmente y sincronizado en Supabase.');
+  }
+
+  publishRevision() {
+    this.activeRevision.update(v => v + 1);
+    this.favoritesService.triggerToast(`¡Revisión v${this.activeRevision()}.0 publicada como INMUTABLE! Lista para clientes.`);
+  }
+
+  saveMetadata() {
+    this.favoritesService.triggerToast('Ficha técnica actualizada en PostgreSQL.');
+  }
+
+  addNewSection() {
+    const num = this.mediaItems().length + 1;
+    this.favoritesService.triggerToast('Nueva sección agregada al árbol.');
+  }
+
+  addNewLocation() {
+    this.favoritesService.triggerToast('Abriendo asistente de registro de nueva locación.');
   }
 
   onFilesSelected(event: any) {
     const files = event.target.files;
-    if (files && files.length > 0) {
-      this.uploadCount.set(files.length);
-    }
+    if (!files || files.length === 0) return;
+
+    this.isUploading.set(true);
+    this.uploadProgress.set(20);
+
+    const timer = setInterval(() => {
+      this.uploadProgress.update(p => {
+        if (p >= 100) {
+          clearInterval(timer);
+          this.isUploading.set(false);
+          this.mediaItems.update(list => [
+            {
+              id: 'em-' + Date.now(),
+              title: files[0].name,
+              url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBoPdw6Ah2CCawFhTG2RY1TikZ_30fDY0vIe2jzYIresWo0wbjAz0jG7ZQ6U1s0Xuv-vnmaZwCnuYIGFF0q_in44ASyoxRSIsKf--ZC1xxsfNXIJV9_9UgCDGXlQ0dgodsWKSNBfxYIscPKqF_oSF356GWpJo8nCT0vpGpMboVxYnJnbAg6OGqBE5b61hrrNX3AtTBm6zyWhZ5qIjziJonIh3HcgT_fJGpsluOyuui89c8ITVx3vr7X',
+              specs: '4K WebP • Recién Subido',
+              isCover: false,
+              type: 'image'
+            },
+            ...list
+          ]);
+          this.favoritesService.triggerToast(`${files.length} archivos subidos a Supabase Storage con éxito.`);
+          return 100;
+        }
+        return p + 25;
+      });
+    }, 250);
   }
 
-  publishRevision() {
-    const p = this.project();
-    if (p) {
-      p.revision = p.revision + 1;
-      p.publishedRevision = p.revision;
-      p.status = 'published';
-      alert(`¡Revisión v${p.revision}.0 publicada con éxito en Supabase!\nEl cliente ya puede consultar la nueva versión.`);
-    }
-  }
-
-  previewAsClient() {
-    const p = this.project();
-    if (p) {
-      this.router.navigate(['/p', p.id]);
-    }
-  }
-
-  goBack() {
-    this.router.navigate(['/admin']);
+  notifyInfo(msg: string) {
+    this.favoritesService.triggerToast(msg);
   }
 }
