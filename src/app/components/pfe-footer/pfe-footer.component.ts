@@ -56,10 +56,10 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
                 </a>
               </li>
               <li>
-                <a routerLink="/admin/login" class="hover:text-primary transition-colors flex items-center gap-1.5">
-                  <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-                  Acceso de Administrador PFE Core
-                </a>
+                <span class="text-on-surface-variant/80 flex items-center gap-1.5 cursor-default">
+                  <span class="material-symbols-outlined text-[16px] text-secondary">verified_user</span>
+                  Protocolo de Confidencialidad NDA
+                </span>
               </li>
               <li>
                 <a routerLink="/" class="hover:text-primary transition-colors flex items-center gap-1.5">

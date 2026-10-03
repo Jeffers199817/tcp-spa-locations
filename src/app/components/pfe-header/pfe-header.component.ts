@@ -106,29 +106,29 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
 
           <div class="h-5 w-px bg-surface-container-highest hidden sm:block"></div>
 
-          <!-- Quick View Switcher (Cliente vs Admin con Protección) -->
-          <div class="flex items-center gap-1 bg-surface-container-low p-0.5 rounded-full shrink-0 text-xs">
-            <a routerLink="/p/10000000-0000-4000-8000-000000000001" 
-               [class.bg-surface-container-lowest]="isClientView()"
-               [class.shadow-sm]="isClientView()"
-               [class.font-bold]="isClientView()"
-               class="px-2.5 py-1 rounded-full font-label-md text-on-surface transition-all flex items-center gap-1">
-              <span class="material-symbols-outlined text-[14px] text-secondary">visibility</span>
-              <span class="hidden xs:inline">Vista</span> Cliente
-            </a>
-            
-            <button (click)="handleAdminClick()" 
-               [class.bg-surface-container-lowest]="!isClientView()"
-               [class.shadow-sm]="!isClientView()"
-               [class.font-bold]="!isClientView()"
-               class="px-2.5 py-1 rounded-full font-label-md text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1 cursor-pointer">
-              <span class="material-symbols-outlined text-[14px]">tune</span>
-              Admin
-              @if (isAdmin()) {
+          <!-- Quick View Switcher (Solo visible si el usuario ya es Administrador autenticado) -->
+          @if (isAdmin()) {
+            <div class="flex items-center gap-1 bg-surface-container-low p-0.5 rounded-full shrink-0 text-xs">
+              <a [routerLink]="['/p', currentProjectId()]" 
+                 [class.bg-surface-container-lowest]="isClientView()"
+                 [class.shadow-sm]="isClientView()"
+                 [class.font-bold]="isClientView()"
+                 class="px-2.5 py-1 rounded-full font-label-md text-on-surface transition-all flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-secondary">visibility</span>
+                <span class="hidden xs:inline">Vista</span> Cliente
+              </a>
+              
+              <a routerLink="/admin" 
+                 [class.bg-surface-container-lowest]="!isClientView()"
+                 [class.shadow-sm]="!isClientView()"
+                 [class.font-bold]="!isClientView()"
+                 class="px-2.5 py-1 rounded-full font-label-md text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[14px]">tune</span>
+                Admin
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Sesión Admin Activa"></span>
-              }
-            </button>
-          </div>
+              </a>
+            </div>
+          }
 
           <!-- User Avatar Profile Menu -->
           <div class="relative">
@@ -153,14 +153,12 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
 
                 <div class="py-2 text-[11px] text-on-surface-variant flex flex-col gap-1.5">
                   <div class="flex justify-between">
-                    <span>Estado Admin:</span>
-                    <span class="font-bold" [class.text-emerald-600]="isAdmin()" [class.text-amber-600]="!isAdmin()">
-                      {{ isAdmin() ? 'Autenticado' : 'Protegido (Requiere Llave)' }}
-                    </span>
-                  </div>
-                  <div class="flex justify-between">
                     <span>Código Proyecto:</span>
                     <span class="font-bold text-on-surface font-mono">{{ currentProject()?.accessCode }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>Revisión:</span>
+                    <span class="font-semibold text-secondary">v{{ currentProject()?.revision }}.0 Inmutable</span>
                   </div>
                 </div>
 
@@ -176,10 +174,10 @@ import { PfeLogoComponent } from '../pfe-logo/pfe-logo.component';
                       <span>Cerrar Sesión de Administrador</span>
                     </button>
                   } @else {
-                    <a routerLink="/admin/login" (click)="isProfileMenuOpen.set(false)" class="text-xs text-primary font-semibold hover:underline flex items-center gap-1">
-                      <span class="material-symbols-outlined text-[14px]">key</span>
-                      <span>Ingresar como Administrador</span>
-                    </a>
+                    <button (click)="logoutClient()" class="text-xs text-error font-semibold hover:underline flex items-center gap-1 w-full text-left cursor-pointer">
+                      <span class="material-symbols-outlined text-[14px]">lock</span>
+                      <span>Salir de la Galería</span>
+                    </button>
                   }
                 </div>
               </div>
@@ -314,12 +312,19 @@ export class PfeHeaderComponent {
     this.isProfileMenuOpen.update(v => !v);
   }
 
+  logoutClient() {
+    this.isProfileMenuOpen.set(false);
+    try {
+      sessionStorage.removeItem('pfe_client_auth_code');
+    } catch {}
+    this.favoritesService.triggerToast('Sesión de proyecto cerrada.');
+    this.router.navigate(['/']);
+  }
+
   selectProject(projectId: string) {
-    const p = this.allProjects().find(x => x.id === projectId);
-    if (p) {
-      this.projectsService.currentProject.set(p);
-    }
+    this.projectsService.selectProjectById(projectId);
     this.isProjectDropdownOpen.set(false);
+    this.router.navigate(['/p', projectId]);
   }
 
   openMapModal() {

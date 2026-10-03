@@ -15,15 +15,13 @@ import { PfeLogoComponent } from '../../components/pfe-logo/pfe-logo.component';
   template: `
     <div class="min-h-screen flex flex-col justify-between bg-surface font-body-md text-on-surface antialiased">
       
-      <!-- Top mini-bar -->
+      <!-- Top mini-bar (100% Client Clean - Sin Enlaces de Admin) -->
       <div class="w-full py-3.5 px-6 flex items-center justify-between border-b border-surface-container-high/60 bg-surface-container-lowest/80 backdrop-blur-sm">
         <app-pfe-logo size="sm"></app-pfe-logo>
         
-        <div class="flex items-center gap-3">
-          <a routerLink="/admin" class="text-xs font-semibold text-secondary hover:text-primary transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container">
-            <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-            <span>Acceso Admin</span>
-          </a>
+        <div class="flex items-center gap-2 text-xs text-on-surface-variant font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Portal Privado de Locaciones</span>
         </div>
       </div>
 
@@ -260,7 +258,7 @@ export class ClientAccessComponent implements OnInit {
 
   formatInput() {
     let val = this.passcode.toUpperCase().replace(/[^A-Z0-9-]/g, '');
-    if (val.length === 3 && !val.includes('-')) {
+    if (val.startsWith('LOC') && val.length === 3 && !val.includes('-')) {
       val = val + '-';
     }
     this.passcode = val;
@@ -281,6 +279,16 @@ export class ClientAccessComponent implements OnInit {
   }
 
   async handleAuth(isAutoFromUrl: boolean = false) {
+    const clean = this.passcode.trim().toUpperCase();
+
+    // Acceso administrativo directo si se ingresa la clave de admin
+    if (clean === 'ADMIN' || clean === 'PFE-ADMIN-MASTER' || clean === 'ADM-IN') {
+      this.adminAuth.login('PFE-ADMIN-MASTER');
+      this.favoritesService.triggerToast('Sesión de Administrador PFE Core activada.');
+      this.router.navigate(['/admin']);
+      return;
+    }
+
     if (!this.passcode || this.passcode.length < 5) {
       this.errorMessage = 'Ingresa un código válido (ej. LOC-2026-X o LOC-8821).';
       return;

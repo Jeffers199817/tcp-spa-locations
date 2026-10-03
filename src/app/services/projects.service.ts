@@ -10,8 +10,8 @@ export class ProjectsService {
   public allProjects = signal<Project[]>([]);
   public loading = signal<boolean>(false);
 
-  // Proyecto maestro enriquecido con todos los datos y fotos del prototipo Stitch
-  private demoProject: Project = {
+  // ==================== PROYECTO 1: Campaña Global Verano 2026 ====================
+  private p1: Project = {
     id: '10000000-0000-4000-8000-000000000001',
     title: 'Campaña Global Verano 2026',
     description: 'Selección de locaciones contemporáneas, industriales y coloniales para rodaje de campaña internacional comercial y catálogo editorial.',
@@ -106,20 +106,20 @@ export class ProjectsService {
               {
                 id: 'm-ped-vid',
                 type: 'video',
-                title: 'Barrido Cámara Living & Cocina (ProRes Proxy)',
-                alt: 'Video clip técnico de movimiento de steadycam a través del salón principal',
+                title: 'Clip Steadycam Living & Cocina',
+                alt: 'Recorrido técnico en estabilizador mostrando proporciones y acústica',
                 mime: 'video/mp4',
-                bytes: 42000000,
-                width: 3840,
-                height: 2160,
+                bytes: 18500000,
+                width: 1920,
+                height: 1080,
                 url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80'
               }
             ]
           },
           {
             id: '30000000-0000-4000-8000-000000000003',
-            title: '03. Terrazas & Espejo de Agua',
-            description: 'Área exterior con alberca rectangular, deck de teca y vista panorámica a la reserva ecológica.',
+            title: '03. Terrazas & Alberca',
+            description: 'Deck perimetral de madera de teca con alberca rectangular y vistas panorámicas despejadas hacia el sur.',
             order: 2,
             details: [],
             mediaIds: ['m-ped-6', 'm-ped-7'],
@@ -127,8 +127,8 @@ export class ProjectsService {
               {
                 id: 'm-ped-6',
                 type: 'image',
-                title: 'Terraza Panorámica & Deck de Madera',
-                alt: 'Terraza con tumbonas de diseño y alberca infinita',
+                title: 'Terraza Panorámica & Deck',
+                alt: 'Deck exterior con piscina y asoleadero',
                 mime: 'image/webp',
                 bytes: 3200000,
                 width: 3840,
@@ -139,7 +139,7 @@ export class ProjectsService {
                 id: 'm-ped-7',
                 type: 'image',
                 title: 'Suite Master & Vestidor',
-                alt: 'Habitación minimalista con baño en suite y carpintería en roble',
+                alt: 'Dormitorio principal con revestimientos de roble natural y luz rasante f/1.4',
                 mime: 'image/webp',
                 bytes: 2750000,
                 width: 3840,
@@ -153,15 +153,15 @@ export class ProjectsService {
       {
         id: '20000000-0000-4000-8000-000000000002',
         title: 'Hangar Industrial San Telmo',
-        description: 'San Telmo / Vallejo • 1,200 m² diáfanos • Altura libre 9.0m a cumbrera • Trifásica 125A industrial • Acceso para camiones de 10T directo al set',
+        description: 'San Telmo / Vallejo • 1,200 m² diáfanos • Altura libre 9.0m a cumbrera • Trifásica 125A industrial • Acceso directo camiones 10 toneladas',
         order: 1,
         coverMediaId: 'm-hang-1',
         coverUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA3w_F6sEyCIH4qWyI6kQX-RlXoVaUo2HtLiJUugLYP4V3u0LeFQez4Uk5_HRen6iUMXza6-wL_jhVrSiUYLV4z30oY1CGMwl0WGMOMUM8z5vRN2Zh7WR0CfRFP-DkNbWrxTMU9_XoRHMJw9ey6wq3vPWNGhLdYchxJxviXcUbfV7dd8iBHtYodWj47O3umLXuxoHhmN_NuXoNGWhJpw8_q120npfFZjc4w28pyqH-b1lMce9YegsX2',
         sections: [
           {
             id: '30000000-0000-4000-8000-000000000004',
-            title: '01. Nave Principal & Estructuras de Acero',
-            description: 'Vigas reticuladas expuestas, piso pulido de alto impacto y amplios portones para iluminación cenital.',
+            title: '01. Nave Principal & Vigas',
+            description: 'Espacio continuo sin columnas intermedias, piso de concreto pulido de alta resistencia para grúas y dolly.',
             order: 0,
             details: [],
             mediaIds: ['m-hang-1', 'm-hang-2'],
@@ -170,7 +170,7 @@ export class ProjectsService {
                 id: 'm-hang-1',
                 type: 'image',
                 title: 'Nave Principal Industrial Diáfana',
-                alt: 'Estructura monumental de hangar industrial con tragaluces',
+                alt: 'Hangar industrial con estructura metálica y ventanales cenitales',
                 mime: 'image/webp',
                 bytes: 3800000,
                 width: 3840,
@@ -181,7 +181,7 @@ export class ProjectsService {
                 id: 'm-hang-2',
                 type: 'image',
                 title: 'Mezzanine & Rampa Técnica',
-                alt: 'Vista superior desde el mezzanine metálico hacia la pista de rodaje',
+                alt: 'Estructura superior de pasarelas técnicas para iluminación cenital',
                 mime: 'image/webp',
                 bytes: 3100000,
                 width: 3840,
@@ -226,81 +226,374 @@ export class ProjectsService {
     ]
   };
 
-  constructor(private supabase: SupabaseService) {
-    this.currentProject.set(this.demoProject);
-    this.allProjects.set([
-      this.demoProject,
+  // ==================== PROYECTO 2: Campaña Primavera-Costa 2026 ====================
+  private p2: Project = {
+    id: '10000000-0000-4000-8000-000000000002',
+    title: 'Campaña Primavera-Costa 2026',
+    description: 'Colección internacional de moda exterior en residencias costeras minimalistas y acantilados de roca volcánica sobre el Pacífico.',
+    status: 'published',
+    revision: 2,
+    publishedRevision: 2,
+    accessCode: 'LOC-8821',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    locations: [
       {
-        id: '10000000-0000-4000-8000-000000000002',
-        title: 'Campaña Primavera-Verano 2026',
-        description: 'Colección internacional de moda exterior en locaciones costeras y residencias minimalistas.',
-        status: 'published',
-        revision: 2,
-        publishedRevision: 2,
-        accessCode: 'LOC-8821',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        locations: []
+        id: '20000000-0000-4000-8000-000000000004',
+        title: 'Residencia Brutalista Punta Mita',
+        description: 'Punta de Mita, Nayarit • 520 m² sobre risco • Alberca infinity de 25m • Muros de concreto blanco desbastado y madera tropical • Vistas 270° al mar abierto',
+        order: 0,
+        coverMediaId: 'm-costa-1',
+        coverUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1600&q=80',
+        sections: [
+          {
+            id: '30000000-0000-4000-8000-000000000006',
+            title: '01. Plataforma Volada & Alberca Infinity',
+            description: 'Terraza principal volada hacia el horizonte, orientación poniente para golden hour pura y reflejos marinos.',
+            order: 0,
+            details: [],
+            mediaIds: ['m-costa-1', 'm-costa-2'],
+            media: [
+              {
+                id: 'm-costa-1',
+                type: 'image',
+                title: 'Alberca Infinity & Horizonte del Pacífico',
+                alt: 'Línea de agua infinita con el mar de fondo al atardecer',
+                mime: 'image/webp',
+                bytes: 3200000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1600&q=80'
+              },
+              {
+                id: 'm-costa-2',
+                type: 'image',
+                title: 'Muros de Concreto Blanco & Sombra de Celosía',
+                alt: 'Fachada con patrones geométricos de sombra y palma escultórica',
+                mime: 'image/webp',
+                bytes: 2900000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80'
+              }
+            ]
+          },
+          {
+            id: '30000000-0000-4000-8000-000000000007',
+            title: '02. Living Abierto & Ventanales Corredizos',
+            description: 'Salón interior con ventilación cruzada natural, piso de mármol travertino arena y muebles de lino crudo.',
+            order: 1,
+            details: [],
+            mediaIds: ['m-costa-3'],
+            media: [
+              {
+                id: 'm-costa-3',
+                type: 'image',
+                title: 'Salón Diáfano & Mármol Travertino',
+                alt: 'Espacio interior sin columnas con vista directa al oleaje',
+                mime: 'image/webp',
+                bytes: 3100000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1600&q=80'
+              }
+            ]
+          }
+        ]
       },
       {
-        id: '10000000-0000-4000-8000-000000000003',
-        title: 'Comercial Fragancia Noir Q3',
-        description: 'Palacetes clásicos, escaleras de mármol y salones dorados para spot publicitario premium.',
-        status: 'published',
-        revision: 1,
-        publishedRevision: 1,
-        accessCode: 'LOC-NOIR-88',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        locations: []
-      },
-      {
-        id: '10000000-0000-4000-8000-000000000004',
-        title: 'Serie Streaming T2 - Interiores Urbanos',
-        description: 'Lofts contemporáneos, departamentos brutalistas y estudios en CDMX.',
-        status: 'draft',
-        revision: 1,
-        publishedRevision: null,
-        accessCode: 'LOC-T2-2026',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        locations: []
-      },
-      {
-        id: '10000000-0000-4000-8000-000000000005',
-        title: 'Lanzamiento Automotriz Eléctrico 2026',
-        description: 'Carreteras escénicas desérticas, hangares aeroportuarios y puentes modernos.',
-        status: 'published',
-        revision: 3,
-        publishedRevision: 3,
-        accessCode: 'LOC-AUTO-99',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        locations: []
-      },
-      {
-        id: '10000000-0000-4000-8000-000000000006',
-        title: 'Shooting Editorial Arquitectura Sostenible',
-        description: 'Invernaderos botánicos, casas de adobe contemporáneas y pérgolas bioclimáticas.',
-        status: 'draft',
-        revision: 1,
-        publishedRevision: null,
-        accessCode: 'LOC-ECO-44',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        locations: []
+        id: '20000000-0000-4000-8000-000000000005',
+        title: 'Casa de Playa Litibú',
+        description: 'Litibú, Bahía de Banderas • 380 m² sobre duna natural • Estructura de vigas laminadas y deck de teca • Acceso privado directo a playa virgen',
+        order: 1,
+        coverMediaId: 'm-costa-4',
+        coverUrl: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=80',
+        sections: [
+          {
+            id: '30000000-0000-4000-8000-000000000008',
+            title: '01. Deck de Teca & Dunas Naturales',
+            description: 'Pasarela de madera elevada sobre arena y vegetación costera protegida.',
+            order: 0,
+            details: [],
+            mediaIds: ['m-costa-4', 'm-costa-5'],
+            media: [
+              {
+                id: 'm-costa-4',
+                type: 'image',
+                title: 'Pasarela Elevada & Acceso al Mar',
+                alt: 'Deck de madera clara enmarcado por dunas y palmeras',
+                mime: 'image/webp',
+                bytes: 2800000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=80'
+              },
+              {
+                id: 'm-costa-5',
+                type: 'image',
+                title: 'Pérgola de Sombras & Lounge Exterior',
+                alt: 'Estructura minimalista de bambú y madera con luz tamizada',
+                mime: 'image/webp',
+                bytes: 2600000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1600&q=80'
+              }
+            ]
+          }
+        ]
       }
-    ]);
+    ]
+  };
+
+  // ==================== PROYECTO 3: Comercial Fragancia Noir Q3 ====================
+  private p3: Project = {
+    id: '10000000-0000-4000-8000-000000000003',
+    title: 'Comercial Fragancia Noir Q3',
+    description: 'Palacetes clásicos, escalinatas de mármol Carrara y salones dorados para spot publicitario premium internacional.',
+    status: 'published',
+    revision: 1,
+    publishedRevision: 1,
+    accessCode: 'LOC-NOIR-88',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    locations: [
+      {
+        id: '20000000-0000-4000-8000-000000000006',
+        title: 'Palacio Porfiriano Juárez',
+        description: 'Colonia Juárez, CDMX • 850 m² útiles • Gran escalinata de mármol de Carrara • Techos con molduras doradas de 7.5m • Aislamiento acústico de alto calibre',
+        order: 0,
+        coverMediaId: 'm-noir-1',
+        coverUrl: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=1600&q=80',
+        sections: [
+          {
+            id: '30000000-0000-4000-8000-000000000009',
+            title: '01. Gran Escalinata de Mármol Carrara',
+            description: 'Escalera imperial simétrica con balaustrada de bronce fundido e iluminación dramática lateral.',
+            order: 0,
+            details: [],
+            mediaIds: ['m-noir-1', 'm-noir-2'],
+            media: [
+              {
+                id: 'm-noir-1',
+                type: 'image',
+                title: 'Escalinata Imperial & Vitral Central',
+                alt: 'Escalera señorial de mármol blanco con luz cenital de vitral',
+                mime: 'image/webp',
+                bytes: 3400000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=1600&q=80'
+              },
+              {
+                id: 'm-noir-2',
+                type: 'image',
+                title: 'Detalle Pasamanos & Molduras de Escayola',
+                alt: 'Close-up de detalles dorados y textura de mármol clásico',
+                mime: 'image/webp',
+                bytes: 2950000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1600&q=80'
+              }
+            ]
+          },
+          {
+            id: '30000000-0000-4000-8000-000000000010',
+            title: '02. Salón de Baile & Espejos Dorados',
+            description: 'Salón de recepción con espejos franceses de 4m, parquet Versalles encerado y candelabros de cristal.',
+            order: 1,
+            details: [],
+            mediaIds: ['m-noir-3'],
+            media: [
+              {
+                id: 'm-noir-3',
+                type: 'image',
+                title: 'Salón de Espejos & Candelabros Baccarat',
+                alt: 'Salón dorado iluminado por velas y arañas de cristal',
+                mime: 'image/webp',
+                bytes: 3600000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1600&q=80'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: '20000000-0000-4000-8000-000000000007',
+        title: 'Mansión Neo-Clásica Roma Norte',
+        description: 'Roma Norte, CDMX • Residencia catalogada INBAL 1910 • Biblioteca de cedro tallado, vitrales modernistas y chimenea de cantera verde',
+        order: 1,
+        coverMediaId: 'm-noir-4',
+        coverUrl: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=80',
+        sections: [
+          {
+            id: '30000000-0000-4000-8000-000000000011',
+            title: '01. Biblioteca & Galería de Arte',
+            description: 'Ambiente íntimo con estanterías de cedro hasta el techo y luz cálida filtrada.',
+            order: 0,
+            details: [],
+            mediaIds: ['m-noir-4'],
+            media: [
+              {
+                id: 'm-noir-4',
+                type: 'image',
+                title: 'Biblioteca de Cedro & Sofás Chéster',
+                alt: 'Biblioteca antigua con iluminación cálida claroscuro',
+                mime: 'image/webp',
+                bytes: 3100000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=80'
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== PROYECTO 4: Lanzamiento Automotriz Eléctrico 2026 ====================
+  private p4: Project = {
+    id: '10000000-0000-4000-8000-000000000005',
+    title: 'Lanzamiento Automotriz Eléctrico 2026',
+    description: 'Carreteras escénicas privadas, hangares aeronáuticos de alta tecnología y túneles brutalistas para rodaje de vehículos.',
+    status: 'published',
+    revision: 3,
+    publishedRevision: 3,
+    accessCode: 'LOC-AUTO-99',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    locations: [
+      {
+        id: '20000000-0000-4000-8000-000000000008',
+        title: 'Hangar Aeroespacial Toluca',
+        description: 'Aeropuerto Toluca • 2,400 m² libres de columnas • Piso epóxico blanco ultrabrillante con reflejo especular • Trifásica 200A • Portón corredizo de 30m',
+        order: 0,
+        coverMediaId: 'm-auto-1',
+        coverUrl: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=1600&q=80',
+        sections: [
+          {
+            id: '30000000-0000-4000-8000-000000000012',
+            title: '01. Nave Blanca & Reflejo Especular',
+            description: 'Piso espejo blanco impoluto para destacar las líneas aerodinámicas de vehículos prototipo.',
+            order: 0,
+            details: [],
+            mediaIds: ['m-auto-1', 'm-auto-2'],
+            media: [
+              {
+                id: 'm-auto-1',
+                type: 'image',
+                title: 'Hangar Blanco & Reflexión Infinita',
+                alt: 'Espacio aeroespacial blanco con iluminación cenital difusa',
+                mime: 'image/webp',
+                bytes: 3500000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=1600&q=80'
+              },
+              {
+                id: 'm-auto-2',
+                type: 'image',
+                title: 'Portón Gigante & Pista de Pruebas',
+                alt: 'Vista hacia la pista exterior con luz de atardecer',
+                mime: 'image/webp',
+                bytes: 3000000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: '20000000-0000-4000-8000-000000000009',
+        title: 'Túnel Brutalista Santa Fe',
+        description: 'Santa Fe, CDMX • Acceso subterráneo privado con arquería de concreto armado y líneas de iluminación LED continua en techo',
+        order: 1,
+        coverMediaId: 'm-auto-3',
+        coverUrl: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1600&q=80',
+        sections: [
+          {
+            id: '30000000-0000-4000-8000-000000000013',
+            title: '01. Arquería de Concreto & Luces Lineales',
+            description: 'Perspectiva infinita ideal para tomas car-to-car con estabilizador y luces de persecución.',
+            order: 0,
+            details: [],
+            mediaIds: ['m-auto-3'],
+            media: [
+              {
+                id: 'm-auto-3',
+                type: 'image',
+                title: 'Túnel de Concreto & Perspectiva de Velocidad',
+                alt: 'Túnel de arquitectura moderna con luces lineales',
+                mime: 'image/webp',
+                bytes: 3200000,
+                width: 3840,
+                height: 2400,
+                url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1600&q=80'
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+
+  constructor(private supabase: SupabaseService) {
+    this.allProjects.set([this.p1, this.p2, this.p3, this.p4]);
+    this.currentProject.set(this.p1);
+    this.checkInitialProjectFromSession();
   }
 
-  // Obtener proyecto por código de acceso
+  private checkInitialProjectFromSession() {
+    try {
+      const code = sessionStorage.getItem('pfe_client_auth_code');
+      if (code) {
+        const found = this.allProjects().find(p => p.accessCode.toUpperCase() === code.toUpperCase());
+        if (found) {
+          this.currentProject.set(found);
+        }
+      }
+    } catch {}
+  }
+
+  // Obtener proyecto por ID
+  getProjectById(id: string): Project | undefined {
+    return this.allProjects().find(p => p.id === id);
+  }
+
+  // Seleccionar proyecto activo por ID (navegación y persistencia)
+  selectProjectById(id: string): Project | null {
+    const found = this.allProjects().find(p => p.id === id);
+    if (found) {
+      this.currentProject.set(found);
+      try {
+        sessionStorage.setItem('pfe_client_auth_code', found.accessCode);
+      } catch {}
+      return found;
+    }
+    return null;
+  }
+
+  // Obtener y validar proyecto por código de acceso NDA
   async verifyCodeAndLoad(code: string): Promise<Project | null> {
     const cleanCode = code.trim().toUpperCase();
-    if (cleanCode === 'LOC-2026-X' || cleanCode === 'LOC-8821' || cleanCode === 'LOC-NOIR-88' || cleanCode === 'LOC-AUTO-99') {
-      this.currentProject.set(this.demoProject);
-      return this.demoProject;
+    
+    // Buscar en los proyectos maestros en memoria
+    const found = this.allProjects().find(p => p.accessCode.toUpperCase() === cleanCode);
+    if (found) {
+      this.currentProject.set(found);
+      try {
+        sessionStorage.setItem('pfe_client_auth_code', found.accessCode);
+      } catch {}
+      return found;
     }
 
+    // Consulta de respaldo en Supabase
     try {
       const { data, error } = await this.supabase.client
         .from('projects')
@@ -310,16 +603,32 @@ export class ProjectsService {
         .single();
 
       if (data && !error) {
-        return this.demoProject;
+        const remoteProj: Project = {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          status: data.status,
+          revision: data.revision || 1,
+          publishedRevision: data.published_revision || 1,
+          accessCode: data.access_code,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+          locations: this.p1.locations
+        };
+        this.currentProject.set(remoteProj);
+        try {
+          sessionStorage.setItem('pfe_client_auth_code', remoteProj.accessCode);
+        } catch {}
+        return remoteProj;
       }
     } catch {
-      // Fallback local garantizado
+      // Fallback local seguro
     }
 
     return null;
   }
 
-  // Crear nuevo proyecto
+  // Crear nuevo proyecto desde panel de administración
   async createProject(title: string, accessCode: string, description?: string): Promise<Project> {
     const newProj: Project = {
       id: 'proj-' + Date.now(),
@@ -331,7 +640,17 @@ export class ProjectsService {
       accessCode: accessCode.toUpperCase(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      locations: []
+      locations: [
+        {
+          id: 'loc-' + Date.now(),
+          title: 'Espacio Principal a Documentar',
+          description: 'Recinto inicial creado automáticamente para scouting técnico.',
+          order: 0,
+          coverMediaId: null,
+          coverUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80',
+          sections: []
+        }
+      ]
     };
 
     this.allProjects.update(list => [newProj, ...list]);

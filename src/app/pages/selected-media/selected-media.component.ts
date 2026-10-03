@@ -59,7 +59,7 @@ interface SelectedCardItem {
               Locaciones Seleccionadas por el Equipo
             </h1>
             <p class="text-sm sm:text-base text-on-surface-variant mt-1 font-normal">
-              {{ activeSelectedCards().length }} medios aprobados para revisión final • Campaña Global Verano 2026
+              {{ activeSelectedCards().length }} medios aprobados para revisión final • {{ currentProjectTitle() }}
             </p>
           </div>
 
@@ -80,21 +80,12 @@ interface SelectedCardItem {
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-surface-container-high p-3 sm:px-4 rounded-xl shadow-xs">
           <div class="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
             <span class="font-bold uppercase tracking-wider text-on-surface text-[11px] mr-1">Distribución:</span>
-            
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low text-on-surface font-medium border border-surface-container-high">
-              <span class="w-2 h-2 rounded-full bg-primary"></span>
-              <span>Villa Moderna Pedregal: <strong class="font-bold">{{ pedregalCount() }}</strong></span>
-            </span>
-
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low text-on-surface font-medium border border-surface-container-high">
-              <span class="w-2 h-2 rounded-full bg-secondary"></span>
-              <span>Hangar San Telmo: <strong class="font-bold">{{ hangarCount() }}</strong></span>
-            </span>
-
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low text-on-surface font-medium border border-surface-container-high">
-              <span class="w-2 h-2 rounded-full bg-tertiary"></span>
-              <span>Casa Colonial: <strong class="font-bold">{{ colonialCount() }}</strong></span>
-            </span>
+            @for (item of locationBreakdown(); track item.name) {
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low text-on-surface font-medium border border-surface-container-high">
+                <span class="w-2 h-2 rounded-full bg-primary"></span>
+                <span>{{ item.name }}: <strong class="font-bold">{{ item.count }}</strong></span>
+              </span>
+            }
           </div>
 
           <!-- Team Avatars -->
@@ -120,7 +111,7 @@ interface SelectedCardItem {
           <p class="text-xs sm:text-sm text-on-surface-variant mt-2 leading-relaxed">
             Regresa al catálogo general y haz clic en la estrella de cualquier foto o video técnico para agregarlo a la selección compartida del equipo.
           </p>
-          <a routerLink="/p/10000000-0000-4000-8000-000000000001" class="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-bold text-xs shadow-sm hover:brightness-105 transition-all">
+          <a [routerLink]="'/p/' + currentProjectId()" class="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-bold text-xs shadow-sm hover:brightness-105 transition-all">
             <span class="material-symbols-outlined text-base">arrow_back</span>
             <span>Explorar Catálogo de Locaciones</span>
           </a>
@@ -239,6 +230,35 @@ interface SelectedCardItem {
           </div>
 
           <div class="flex items-center gap-2 sm:gap-3">
+            <!-- Multi-Resolution Download Dropdown -->
+            <div class="relative">
+              <button (click)="toggleDownloadMenu()" 
+                      class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                      title="Descargar en Varias Resoluciones">
+                <span class="material-symbols-outlined text-[16px]">download</span>
+                <span class="hidden sm:inline">Descargar</span>
+                <span class="material-symbols-outlined text-[14px]">expand_more</span>
+              </button>
+
+              @if (isDownloadMenuOpen()) {
+                <div class="absolute right-0 mt-2 w-56 bg-black/90 backdrop-blur-xl border border-white/20 rounded-xl p-2 shadow-2xl z-50 text-left text-xs animate-in fade-in zoom-in-95">
+                  <span class="text-[10px] text-white/50 uppercase tracking-wider font-bold block px-2 py-1">Formatos de Producción</span>
+                  <button (click)="triggerDownload(currentLightboxCard()!, '4k')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-white/10 text-white flex items-center justify-between cursor-pointer">
+                    <span>4K Master RAW</span>
+                    <span class="text-[10px] text-white/60 font-mono">3840×2400</span>
+                  </button>
+                  <button (click)="triggerDownload(currentLightboxCard()!, '1080p')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-white/10 text-white flex items-center justify-between cursor-pointer">
+                    <span>Full HD 1080p</span>
+                    <span class="text-[10px] text-white/60 font-mono">1920×1200</span>
+                  </button>
+                  <button (click)="triggerDownload(currentLightboxCard()!, 'proxy')" class="w-full text-left px-2.5 py-1.5 rounded hover:bg-white/10 text-white flex items-center justify-between cursor-pointer">
+                    <span>Proxy WebP</span>
+                    <span class="text-[10px] text-white/60 font-mono">1280×800</span>
+                  </button>
+                </div>
+              }
+            </div>
+
             <!-- Zoom Toggle Level Button (1x -> 1.6x -> 2.5x) -->
             <button (click)="cycleZoom()" 
                     class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 text-xs font-mono font-bold transition-all cursor-pointer"
@@ -413,21 +433,52 @@ export class SelectedMediaComponent {
     }
   ];
 
+  public isDownloadMenuOpen = signal<boolean>(false);
+  public currentProject = computed(() => this.projectsService.currentProject() || this.projectsService.allProjects()[0]);
+  public currentProjectTitle = computed(() => this.currentProject()?.title || 'Campaña Global Verano 2026');
+  public currentProjectId = computed(() => this.currentProject()?.id || '10000000-0000-4000-8000-000000000001');
+
+  public allAvailableCards = computed<SelectedCardItem[]>(() => {
+    const cards: SelectedCardItem[] = [];
+    const projs = this.projectsService.allProjects();
+    for (const proj of projs) {
+      for (const loc of proj.locations || []) {
+        for (const sec of loc.sections || []) {
+          for (const m of sec.media || []) {
+            cards.push({
+              id: m.id,
+              locationName: loc.title,
+              locIdNumber: '#' + loc.id.slice(-2),
+              title: m.title,
+              src: m.url || '',
+              specs: (m.width ? `${m.width}x${m.height} • ` : '') + (m.mime || 'image/webp'),
+              chips: [loc.title, m.mime ? m.mime.replace('image/', '').toUpperCase() : '4K RAW', m.type === 'video' ? 'Video 4K' : 'Foto Hi-Res'],
+              areaText: 'Locación Aprobada',
+              soundCheck: true
+            });
+          }
+        }
+      }
+    }
+    for (const mc of this.masterCards) {
+      if (!cards.some(c => c.id === mc.id)) {
+        cards.push(mc);
+      }
+    }
+    return cards;
+  });
+
   public activeSelectedCards = computed(() => {
     const favSet = this.favoritesService.selectedMediaIds();
-    return this.masterCards.filter(c => favSet.has(c.id));
+    return this.allAvailableCards().filter(c => favSet.has(c.id));
   });
 
-  public pedregalCount = computed(() => {
-    return this.activeSelectedCards().filter(c => c.locationName.includes('Pedregal')).length;
-  });
-
-  public hangarCount = computed(() => {
-    return this.activeSelectedCards().filter(c => c.locationName.includes('Hangar')).length;
-  });
-
-  public colonialCount = computed(() => {
-    return this.activeSelectedCards().filter(c => c.locationName.includes('Colonial')).length;
+  public locationBreakdown = computed(() => {
+    const counts = new Map<string, number>();
+    for (const card of this.activeSelectedCards()) {
+      counts.set(card.locationName, (counts.get(card.locationName) || 0) + 1);
+    }
+    return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
   });
 
   public currentLightboxCard = computed(() => {
@@ -436,6 +487,30 @@ export class SelectedMediaComponent {
     if (idx === null || idx < 0 || idx >= cards.length) return null;
     return cards[idx];
   });
+
+  toggleDownloadMenu() {
+    this.isDownloadMenuOpen.update(v => !v);
+  }
+
+  triggerDownload(card: SelectedCardItem, resolution: string) {
+    this.isDownloadMenuOpen.set(false);
+    const suffix = resolution === '4k' ? '_4K_MASTER_RAW' : resolution === '1080p' ? '_1080p_FULLHD' : '_PROXY_WEBP';
+    const filename = `${card.locationName.replace(/[^a-zA-Z0-9]/g, '_')}_${card.title.replace(/[^a-zA-Z0-9]/g, '_')}${suffix}.webp`;
+    
+    try {
+      const link = document.createElement('a');
+      link.href = card.src;
+      link.download = filename;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      this.favoritesService.triggerToast(`Descargando ${resolution.toUpperCase()} (${filename})`);
+    } catch {
+      window.open(card.src, '_blank');
+      this.favoritesService.triggerToast(`Abriendo archivo para descarga`);
+    }
+  }
 
   removeCard(id: string, name: string) {
     this.favoritesService.removeFavorite(id, name);
