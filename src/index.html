@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>PFE Locaciones — Plataforma de Producción</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  
+  <!-- Tipografía Manrope y Google Material Symbols Outlined -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN con tokens de diseño Google Stitch -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#ae2823",
+            "primary-container": "#d14138",
+            "on-primary": "#ffffff",
+            "on-primary-container": "#fffbff",
+            "surface": "#fef8f9",
+            "surface-dim": "#ded9da",
+            "surface-bright": "#fef8f9",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f8f2f3",
+            "surface-container": "#f2eced",
+            "surface-container-high": "#ede7e8",
+            "surface-container-highest": "#e7e1e2",
+            "on-surface": "#1d1b1c",
+            "on-surface-variant": "#5a413e",
+            "outline": "#8d706d",
+            "outline-variant": "#e1beba",
+            "secondary": "#1f6773",
+            "secondary-container": "#a8eaf8",
+            "on-secondary": "#ffffff",
+            "on-secondary-container": "#256b78",
+            "tertiary": "#006763",
+            "tertiary-container": "#00837d",
+            "on-tertiary": "#ffffff",
+            "background": "#fef8f9",
+            "on-background": "#1d1b1c",
+            "error": "#ba1a1a"
+          },
+          fontFamily: {
+            sans: ["Manrope", "system-ui", "sans-serif"]
+          },
+          borderRadius: {
+            "card": "0.75rem",
+            "btn": "0.5rem"
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface text-on-surface font-sans antialiased min-h-screen">
+  <app-root></app-root>
+</body>
+</html>
