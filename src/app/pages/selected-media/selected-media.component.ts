@@ -1,8 +1,9 @@
 import { Component, computed, signal, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ProjectsService } from '../../services/projects.service';
-import { FavoritesService } from '../../services/favorites.service';
+import { FavoritesService, DpNote } from '../../services/favorites.service';
 import { PfeHeaderComponent } from '../../components/pfe-header/pfe-header.component';
 import { PfeFooterComponent } from '../../components/pfe-footer/pfe-footer.component';
 
@@ -21,7 +22,7 @@ interface SelectedCardItem {
 @Component({
   selector: 'app-selected-media',
   standalone: true,
-  imports: [CommonModule, RouterModule, PfeHeaderComponent, PfeFooterComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PfeHeaderComponent, PfeFooterComponent],
   template: `
     <!-- Topbar General -->
     <app-pfe-header></app-pfe-header>
@@ -155,9 +156,17 @@ interface SelectedCardItem {
                     <span class="text-primary truncate pr-1">{{ card.locationName }}</span>
                     <span class="text-on-surface font-extrabold text-sm shrink-0">{{ card.locIdNumber }}</span>
                   </div>
-                  <h3 class="font-bold text-base text-on-surface leading-snug line-clamp-1">
-                    {{ card.title }}
-                  </h3>
+                  <div class="flex items-start justify-between gap-1">
+                    <h3 class="font-bold text-base text-on-surface leading-snug line-clamp-1">
+                      {{ card.title }}
+                    </h3>
+                    @if (hasNote(card.id)) {
+                      <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300 shrink-0" [title]="getNote(card.id)?.noteText || 'Nota DP'">
+                        <span class="material-symbols-outlined text-[12px]">rate_review</span>
+                        <span>DP</span>
+                      </span>
+                    }
+                  </div>
                 </div>
 
                 <!-- Chips -->
@@ -321,26 +330,157 @@ interface SelectedCardItem {
           </button>
         </div>
 
-        <!-- Bottom Technical Specifications Ribbon -->
-        <div class="bg-black/70 backdrop-blur-lg rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 max-w-5xl mx-auto w-full text-white text-xs font-medium border border-white/10 z-20">
-          <div class="flex flex-wrap items-center gap-4 text-left">
-            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-amber-400">wb_sunny</span> Travesía solar: Azimut 112°</span>
-            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-sky-400">straighten</span> Lente: 24mm - 35mm</span>
-            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-red-400">power</span> Conexiones trifásicas 12m</span>
-            <span class="hidden md:inline text-white/30">•</span>
-            <span class="hidden md:flex items-center gap-1 text-white/80">
-              <span class="material-symbols-outlined text-[15px] text-tertiary-fixed">hd</span>
-              <span>Ultra Alta Resolución 4K RAW WebP</span>
-            </span>
+        <!-- Bottom Technical Specifications Ribbon with DP Note display & button -->
+        <div class="bg-[#0c0c0e]/95 backdrop-blur-xl rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 max-w-5xl mx-auto w-full text-white text-xs font-medium border border-white/20 z-20 shadow-2xl">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-left">
+            <div class="flex items-center gap-3">
+              <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-amber-400">wb_sunny</span> Travesía solar: Azimut 112°</span>
+              <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-sky-400">straighten</span> 24mm - 35mm</span>
+              <span class="hidden md:flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-red-400">power</span> Trifásica 12m</span>
+            </div>
+
+            @if (currentNote()) {
+              <div class="flex items-center gap-2 bg-amber-500/20 border border-amber-500/40 px-3 py-1 rounded-lg text-amber-200 text-xs">
+                <span class="material-symbols-outlined text-[16px] text-amber-400 shrink-0">rate_review</span>
+                <div class="flex items-center gap-1.5 truncate max-w-xs sm:max-w-md">
+                  <strong class="text-amber-300 font-bold shrink-0">DP ({{ currentNote()?.category }}):</strong>
+                  <span class="truncate italic text-white/90">"{{ currentNote()?.noteText }}"</span>
+                </div>
+              </div>
+            }
           </div>
 
-          <div class="flex items-center gap-2">
-            <button (click)="addDpNote()" class="px-3.5 py-1.5 rounded-lg bg-white/20 hover:bg-white text-white hover:text-black font-bold text-xs transition-colors cursor-pointer flex items-center gap-1">
-              <span class="material-symbols-outlined text-[15px]">edit_note</span>
-              <span>Añadir Nota DP</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <button (click)="openDpNoteModal()" 
+                    class="px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 border"
+                    [class.bg-amber-500]="!!currentNote()"
+                    [class.border-amber-400]="!!currentNote()"
+                    [class.text-black]="!!currentNote()"
+                    [class.hover:bg-amber-400]="!!currentNote()"
+                    [class.bg-[#1c1c22]]="!currentNote()"
+                    [class.border-white/30]="!currentNote()"
+                    [class.text-white]="!currentNote()"
+                    [class.hover:bg-white]="!currentNote()"
+                    [class.hover:text-black]="!currentNote()">
+              <span class="material-symbols-outlined text-[18px]">edit_note</span>
+              <span>{{ currentNote() ? 'Editar Nota de DP' : 'Añadir Nota de DP' }}</span>
             </button>
           </div>
         </div>
+
+        <!-- MODAL INTERACTIVO DE NOTA DE DP -->
+        @if (isDpNoteModalOpen()) {
+          <div class="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in" (click)="closeDpNoteModal()">
+            <div class="bg-[#141418] border-2 border-white/30 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 text-left text-white" (click)="$event.stopPropagation()">
+              
+              <!-- Modal Header -->
+              <div class="flex items-start justify-between pb-3 border-b border-white/15">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-2xl">movie_filter</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <h3 class="font-bold text-base text-white">Nota Técnica de Dirección de Fotografía (DP)</h3>
+                    <span class="text-xs text-white/70">{{ currentLightboxCard()?.locationName }} • {{ currentLightboxCard()?.title }}</span>
+                  </div>
+                </div>
+                <button (click)="closeDpNoteModal()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
+                  <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+              </div>
+
+              <!-- Categoría / Especialidad -->
+              <div>
+                <label class="block text-xs font-bold text-white/80 uppercase tracking-wider mb-2">Especialidad de la Nota:</label>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (cat of ['Lentes / Óptica', 'Iluminación / Sol', 'Grip / Cámara', 'Eléctrico / Planta', 'Arte & Set']; track cat) {
+                    <button type="button" 
+                            (click)="noteCategory.set(cat)" 
+                            class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border"
+                            [class.bg-amber-500]="noteCategory() === cat"
+                            [class.border-amber-400]="noteCategory() === cat"
+                            [class.text-black]="noteCategory() === cat"
+                            [class.bg-white/10]="noteCategory() !== cat"
+                            [class.border-white/20]="noteCategory() !== cat"
+                            [class.text-white/80]="noteCategory() !== cat">
+                      {{ cat }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- Quick presets / suggestions -->
+              <div>
+                <label class="block text-[11px] font-medium text-white/60 mb-1">Sugerencias rápidas de rodaje:</label>
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" (click)="appendPreset('Lente anamórfico 35mm')" class="text-[11px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/15 text-white/70 border border-white/10 cursor-pointer">
+                    + Anamórfico 35mm
+                  </button>
+                  <button type="button" (click)="appendPreset('Hora mágica 17:30h')" class="text-[11px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/15 text-white/70 border border-white/10 cursor-pointer">
+                    + Hora mágica 17:30h
+                  </button>
+                  <button type="button" (click)="appendPreset('Riel de dolly sobre piso')" class="text-[11px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/15 text-white/70 border border-white/10 cursor-pointer">
+                    + Riel de dolly
+                  </button>
+                  <button type="button" (click)="appendPreset('Acometida trifásica 80A')" class="text-[11px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/15 text-white/70 border border-white/10 cursor-pointer">
+                    + Trifásica 80A
+                  </button>
+                </div>
+              </div>
+
+              <!-- Textarea -->
+              <div>
+                <label class="block text-xs font-bold text-white/80 uppercase tracking-wider mb-1.5" for="dp-note-selected-textarea">
+                  Instrucción / Requerimiento Técnico:
+                </label>
+                <textarea 
+                  id="dp-note-selected-textarea"
+                  rows="3"
+                  [(ngModel)]="noteInputText"
+                  placeholder="Ej: Montar óptica anamórfica 40mm a f/2.0. Solicitar HMI 4K para contrarrestar luz solar desde el jardín poniente..."
+                  class="w-full bg-[#0a0a0d] border border-white/30 focus:border-amber-400 rounded-xl p-3 text-white text-xs placeholder:text-white/40 focus:outline-none transition-colors resize-none leading-relaxed"
+                ></textarea>
+              </div>
+
+              <!-- Author / Firmante -->
+              <div>
+                <label class="block text-xs font-bold text-white/80 uppercase tracking-wider mb-1" for="dp-note-selected-author">
+                  Responsable / Cargo:
+                </label>
+                <input 
+                  id="dp-note-selected-author"
+                  type="text"
+                  [(ngModel)]="noteAuthor"
+                  placeholder="Director de Fotografía (DP)"
+                  class="w-full bg-[#0a0a0d] border border-white/30 focus:border-amber-400 rounded-xl px-3 py-2 text-white text-xs placeholder:text-white/40 focus:outline-none transition-colors"
+                />
+              </div>
+
+              <!-- Action buttons -->
+              <div class="flex items-center justify-between pt-2 border-t border-white/15">
+                <div>
+                  @if (currentNote()) {
+                    <button type="button" (click)="deleteDpNote()" class="px-3 py-2 rounded-lg bg-rose-900/40 hover:bg-rose-700 text-rose-200 text-xs font-bold transition-colors cursor-pointer border border-rose-500/40 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[15px]">delete</span>
+                      <span>Eliminar Nota</span>
+                    </button>
+                  }
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button type="button" (click)="closeDpNoteModal()" class="px-3.5 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors cursor-pointer">
+                    Cancelar
+                  </button>
+                  <button type="button" (click)="saveDpNote()" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">save</span>
+                    <span>Guardar Nota de DP</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        }
 
       </div>
     }
@@ -586,14 +726,83 @@ export class SelectedMediaComponent {
     this.zoomLevel.set(1);
   }
 
-  addDpNote() {
-    this.favoritesService.triggerToast('Nota técnica registrada para el Director de Fotografía.');
+  // Control de Notas de DP
+  public isDpNoteModalOpen = signal<boolean>(false);
+  public noteInputText: string = '';
+  public noteCategory = signal<string>('Lentes / Óptica');
+  public noteAuthor: string = 'Director de Fotografía (DP)';
+
+  public currentNote = computed<DpNote | undefined>(() => {
+    const cur = this.currentLightboxCard();
+    if (!cur) return undefined;
+    return this.favoritesService.getNote(cur.id);
+  });
+
+  hasNote(id: string): boolean {
+    return this.favoritesService.hasNote(id);
+  }
+
+  getNote(id: string): DpNote | undefined {
+    return this.favoritesService.getNote(id);
+  }
+
+  openDpNoteModal() {
+    const cur = this.currentLightboxCard();
+    if (!cur) return;
+    const existing = this.favoritesService.getNote(cur.id);
+    if (existing) {
+      this.noteInputText = existing.noteText;
+      this.noteCategory.set(existing.category || 'Lentes / Óptica');
+      this.noteAuthor = existing.author || 'Director de Fotografía (DP)';
+    } else {
+      this.noteInputText = '';
+      this.noteCategory.set('Lentes / Óptica');
+      this.noteAuthor = 'Director de Fotografía (DP)';
+    }
+    this.isDpNoteModalOpen.set(true);
+  }
+
+  closeDpNoteModal() {
+    this.isDpNoteModalOpen.set(false);
+  }
+
+  appendPreset(text: string) {
+    if (this.noteInputText) {
+      this.noteInputText += ` • ${text}`;
+    } else {
+      this.noteInputText = text;
+    }
+  }
+
+  saveDpNote() {
+    const cur = this.currentLightboxCard();
+    if (!cur) return;
+    if (!this.noteInputText || !this.noteInputText.trim()) {
+      this.favoritesService.triggerToast('Por favor escribe el requerimiento técnico para la nota.', 'warning');
+      return;
+    }
+    this.favoritesService.saveNote(cur.id, this.noteInputText, this.noteCategory(), this.noteAuthor);
+    this.isDpNoteModalOpen.set(false);
+  }
+
+  deleteDpNote() {
+    const cur = this.currentLightboxCard();
+    if (!cur) return;
+    this.favoritesService.deleteNote(cur.id);
+    this.isDpNoteModalOpen.set(false);
   }
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent) {
     if (this.lightboxIdx() !== null) {
-      if (event.key === 'Escape') this.closeLightbox();
+      if (event.key === 'Escape') {
+        if (this.isDpNoteModalOpen()) {
+          this.closeDpNoteModal();
+          return;
+        }
+        this.closeLightbox();
+      }
+      if (this.isDpNoteModalOpen()) return;
       if (event.key === 'ArrowRight') this.nextLightbox();
       if (event.key === 'ArrowLeft') this.prevLightbox();
       if (event.key === 'z' || event.key === 'Z') this.cycleZoom();
