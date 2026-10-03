@@ -1,14 +1,16 @@
-import { Component, computed, signal, inject, HostListener } from '@angular/core';
+import { Component, computed, signal, inject, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { ProjectsService } from '../../services/projects.service';
 import { FavoritesService, DpNote } from '../../services/favorites.service';
 import { PfeHeaderComponent } from '../../components/pfe-header/pfe-header.component';
 import { PfeFooterComponent } from '../../components/pfe-footer/pfe-footer.component';
 
-interface SelectedCardItem {
+export interface SelectedCardItem {
   id: string;
+  projectId?: string;
+  projectTitle?: string;
   locationName: string;
   locIdNumber: string;
   title: string;
@@ -30,14 +32,15 @@ interface SelectedCardItem {
     <!-- Main Container -->
     <main class="w-full flex-grow max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-28 font-body-md text-on-surface antialiased">
       
-      <!-- Toast Notifier -->
-      <div class="fixed top-20 right-6 z-50 transform transition-all duration-300 pointer-events-none flex items-center gap-2.5 bg-inverse-surface text-inverse-on-surface px-4 py-2.5 rounded-lg shadow-xl text-xs font-semibold border border-white/10"
-           [class.translate-y-[-20px]]="!lastToast().visible"
+      <!-- Toast Notifier (Ultra High Priority z-[9999], Visible Over Lightbox & Modals) -->
+      <div class="fixed top-6 right-6 z-[9999] transform transition-all duration-300 pointer-events-none flex items-center gap-3 bg-[#121215] text-white px-5 py-3 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.85)] border border-white/20 text-xs sm:text-sm font-semibold max-w-md"
+           [class.translate-y-[-30px]]="!lastToast().visible"
            [class.opacity-0]="!lastToast().visible"
            [class.translate-y-0]="lastToast().visible"
            [class.opacity-100]="lastToast().visible">
-        <span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
-        <span>{{ lastToast().message }}</span>
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+        <span class="material-symbols-outlined text-[20px] text-emerald-400 shrink-0">check_circle</span>
+        <span class="leading-snug">{{ lastToast().message }}</span>
       </div>
 
       <!-- Header Section -->
@@ -46,84 +49,118 @@ interface SelectedCardItem {
         <!-- Top banner & actions -->
         <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
           <div>
-            <div class="flex items-center gap-2.5 mb-2">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-primary/15 text-primary">
-                RF-03 • Selección Final
+            <div class="flex flex-wrap items-center gap-2.5 mb-2">
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary/15 text-primary border border-primary/20">
+                Top Global • Seleccionadas por Clientes
               </span>
-              <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white border border-surface-container-high text-xs font-medium text-on-surface-variant">
+              <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-surface-container-high text-xs font-semibold text-on-surface-variant shadow-xs">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                <span>3 colaboradores en vivo</span>
+                <span>Votación Multidisciplinaria Activa</span>
               </div>
+              <span class="text-xs text-on-surface-variant font-medium">
+                Regla de Sesión: Máx. 1 desmarcado por tarjeta
+              </span>
             </div>
 
             <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-on-surface">
-              Locaciones Seleccionadas por el Equipo
+              Ranking de Locaciones Seleccionadas
             </h1>
-            <p class="text-sm sm:text-base text-on-surface-variant mt-1 font-normal">
-              {{ activeSelectedCards().length }} medios aprobados para revisión final • {{ currentProjectTitle() }}
+            <p class="text-sm sm:text-base text-on-surface-variant mt-1 font-normal max-w-3xl">
+              Consolidado de locaciones más votadas por directores, agencias y DP en todos los proyectos de producción.
             </p>
           </div>
 
           <!-- Action buttons -->
           <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-            <button (click)="copyShareLink()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:brightness-105 text-on-primary font-semibold text-xs sm:text-sm shadow-sm transition-all active:scale-95 cursor-pointer">
-              <span class="material-symbols-outlined text-[18px]">link</span>
-              <span>Copiar Enlace de Selección</span>
+            <button (click)="copyShareLink()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-semibold text-xs sm:text-sm border border-surface-container-high transition-all active:scale-95 cursor-pointer">
+              <span class="material-symbols-outlined text-[18px] text-primary">link</span>
+              <span>Copiar Enlace</span>
             </button>
-            <button (click)="exportDossier()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-surface-container-high hover:bg-gray-50 text-on-surface font-semibold text-xs sm:text-sm shadow-sm transition-all active:scale-95 cursor-pointer">
-              <span class="material-symbols-outlined text-[18px] text-primary">picture_as_pdf</span>
+            <button (click)="downloadCsv()" class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-surface-container-high hover:bg-gray-50 text-on-surface font-semibold text-xs sm:text-sm shadow-sm transition-all active:scale-95 cursor-pointer" title="Descargar únicamente las locaciones marcadas con checkbox">
+              <span class="material-symbols-outlined text-[18px] text-emerald-600">table_view</span>
+              <span>Descargar Lista CSV ({{ selectedForExportCount() }})</span>
+            </button>
+            <button (click)="exportDossier()" class="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary hover:brightness-105 text-on-primary font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
               <span>Exportar Resumen PDF</span>
             </button>
           </div>
         </div>
 
-        <!-- Distribution pills bar -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-surface-container-high p-3 sm:px-4 rounded-xl shadow-xs">
-          <div class="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
-            <span class="font-bold uppercase tracking-wider text-on-surface text-[11px] mr-1">Distribución:</span>
-            @for (item of locationBreakdown(); track item.name) {
-              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low text-on-surface font-medium border border-surface-container-high">
-                <span class="w-2 h-2 rounded-full bg-primary"></span>
-                <span>{{ item.name }}: <strong class="font-bold">{{ item.count }}</strong></span>
-              </span>
+        <!-- FILTRO DE PROYECTOS & SELECTOR DE EXPORTACIÓN -->
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white border border-surface-container-high p-3 sm:px-4 rounded-xl shadow-xs">
+          
+          <!-- Project Filter Pills -->
+          <div class="flex items-center gap-1.5 overflow-x-auto py-1 text-xs">
+            <span class="font-bold uppercase tracking-wider text-on-surface text-[11px] mr-2 shrink-0">Proyecto:</span>
+            <button (click)="setProjectFilter('all')" 
+                    class="px-3 py-1.5 rounded-lg font-semibold transition-all shrink-0 cursor-pointer border"
+                    [class.bg-primary]="activeProjectFilter() === 'all'"
+                    [class.text-white]="activeProjectFilter() === 'all'"
+                    [class.border-primary]="activeProjectFilter() === 'all'"
+                    [class.bg-surface-container-low]="activeProjectFilter() !== 'all'"
+                    [class.text-on-surface-variant]="activeProjectFilter() !== 'all'"
+                    [class.border-surface-container-high]="activeProjectFilter() !== 'all'">
+              Todos los Proyectos (Top Global)
+            </button>
+            @for (p of availableProjects(); track p.id) {
+              <button (click)="setProjectFilter(p.id)" 
+                      class="px-3 py-1.5 rounded-lg font-semibold transition-all shrink-0 cursor-pointer border"
+                      [class.bg-primary]="activeProjectFilter() === p.id"
+                      [class.text-white]="activeProjectFilter() === p.id"
+                      [class.border-primary]="activeProjectFilter() === p.id"
+                      [class.bg-surface-container-low]="activeProjectFilter() !== p.id"
+                      [class.text-on-surface-variant]="activeProjectFilter() !== p.id"
+                      [class.border-surface-container-high]="activeProjectFilter() !== p.id">
+                {{ p.title }}
+              </button>
             }
           </div>
 
-          <!-- Team Avatars -->
-          <div class="flex items-center gap-2 shrink-0">
-            <div class="flex -space-x-2">
-              <div class="w-7 h-7 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-[10px] ring-2 ring-white" title="Laura M. (Locaciones)">LM</div>
-              <div class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px] ring-2 ring-white" title="Pedro D. (Producción)">PD</div>
-              <div class="w-7 h-7 rounded-full bg-tertiary text-white flex items-center justify-center font-bold text-[10px] ring-2 ring-white" title="Director de Arte">DIR</div>
+          <!-- Quick Multi-selection Actions for CSV/PDF Export -->
+          <div class="flex items-center justify-between sm:justify-end gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-surface-container-high text-xs shrink-0">
+            <span class="text-on-surface-variant font-medium">
+              <strong class="text-on-surface font-bold">{{ selectedForExportCount() }}</strong> de {{ rankedCards().length }} seleccionadas
+            </span>
+            <div class="flex items-center gap-1">
+              <button (click)="selectAllForExport()" class="px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-primary font-bold text-[11px] cursor-pointer">
+                Todas
+              </button>
+              <button (click)="deselectAllForExport()" class="px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-bold text-[11px] cursor-pointer">
+                Ninguna
+              </button>
             </div>
-            <span class="text-xs text-on-surface-variant font-medium">Revisión sincrónica activa</span>
           </div>
         </div>
 
       </div>
 
-      <!-- Empty State if no favorites -->
-      @if (activeSelectedCards().length === 0) {
+      <!-- Empty State if no cards match -->
+      @if (rankedCards().length === 0) {
         <div class="py-16 text-center bg-white rounded-2xl border border-dashed border-surface-container-highest p-8 max-w-2xl mx-auto shadow-sm animate-in fade-in">
           <div class="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
             <span class="material-symbols-outlined text-4xl">star_outline</span>
           </div>
-          <h2 class="text-xl font-bold text-on-surface">No hay locaciones seleccionadas actualmente</h2>
+          <h2 class="text-xl font-bold text-on-surface">No hay locaciones que coincidan con este filtro</h2>
           <p class="text-xs sm:text-sm text-on-surface-variant mt-2 leading-relaxed">
-            Regresa al catálogo general y haz clic en la estrella de cualquier foto o video técnico para agregarlo a la selección compartida del equipo.
+            Puedes explorar el catálogo completo o restablecer el filtro para ver las locaciones más votadas de todos los proyectos.
           </p>
-          <a [routerLink]="'/p/' + currentProjectId()" class="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-bold text-xs shadow-sm hover:brightness-105 transition-all">
-            <span class="material-symbols-outlined text-base">arrow_back</span>
-            <span>Explorar Catálogo de Locaciones</span>
-          </a>
+          <button (click)="setProjectFilter('all')" class="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-bold text-xs shadow-sm hover:brightness-105 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-base">restart_alt</span>
+            <span>Ver Top Global de Todos los Proyectos</span>
+          </button>
         </div>
       }
 
       <!-- MEDIA CARDS GRID -->
-      @if (activeSelectedCards().length > 0) {
+      @if (rankedCards().length > 0) {
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 w-full">
-          @for (card of activeSelectedCards(); track card.id; let i = $index) {
-            <div class="group flex flex-col bg-white border border-surface-container-high rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+          @for (card of rankedCards(); track card.id; let i = $index) {
+            <div class="group flex flex-col bg-white border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 relative"
+                 [class.border-primary]="isCardSelectedForExport(card.id)"
+                 [class.border-surface-container-high]="!isCardSelectedForExport(card.id)"
+                 [class.ring-2]="isCardSelectedForExport(card.id)"
+                 [class.ring-primary/20]="isCardSelectedForExport(card.id)">
               
               <!-- Thumbnail & Badges -->
               <div class="relative w-full aspect-[16/10] overflow-hidden bg-gray-100">
@@ -133,31 +170,61 @@ interface SelectedCardItem {
                   [alt]="card.title" 
                   class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
                 />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none"></div>
 
-                <div class="absolute top-2.5 left-2.5 flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary text-white text-xs font-semibold shadow-sm">
-                  <span class="material-symbols-outlined text-[14px]">check_circle</span>
-                  <span>Seleccionada</span>
+                <!-- Ranking Medal / Position -->
+                <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black shadow-md"
+                     [class.bg-amber-400]="i === 0"
+                     [class.text-amber-950]="i === 0"
+                     [class.bg-slate-200]="i === 1"
+                     [class.text-slate-900]="i === 1"
+                     [class.bg-amber-700]="i === 2"
+                     [class.text-amber-100]="i === 2"
+                     [class.bg-black/75]="i > 2"
+                     [class.text-white]="i > 2">
+                  <span>{{ i === 0 ? '🥇 #1' : i === 1 ? '🥈 #2' : i === 2 ? '🥉 #3' : '#' + (i + 1) }}</span>
+                  <span class="text-[10px] font-semibold opacity-90">Top</span>
                 </div>
 
-                <!-- Unselect Bookmark Button -->
+                <!-- Custom Export Checkbox (Para elegir las que desee descargar en CSV/PDF) -->
+                <label class="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/70 hover:bg-black/85 backdrop-blur-md text-white text-[11px] font-semibold cursor-pointer shadow-sm border border-white/20 select-none"
+                       title="Marcar para incluir en descarga de CSV y PDF">
+                  <input 
+                    type="checkbox" 
+                    [checked]="isCardSelectedForExport(card.id)" 
+                    (change)="toggleCardExportCheck(card.id, $event)"
+                    class="w-3.5 h-3.5 rounded text-primary focus:ring-primary cursor-pointer"
+                  />
+                  <span>Exportar</span>
+                </label>
+
+                <!-- Unselect / Vote Bookmark Button con Regla de 1 Desmarcado por Sesión -->
                 <button 
-                  (click)="removeCard(card.id, card.title)"
-                  class="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-primary flex items-center justify-center transition-transform active:scale-90 shadow-sm cursor-pointer" 
-                  title="Desmarcar">
-                  <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+                  (click)="handleToggleCardSelection(card)"
+                  class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-white/95 hover:bg-white text-on-surface flex items-center gap-1.5 transition-all active:scale-90 shadow-md cursor-pointer border border-black/10" 
+                  [title]="isSessionUnfavorited(card.id) ? 'Ya has retirado tu voto en esta sesión (máx. 1 vez)' : (isFavorite(card.id) ? 'Desmarcar voto (-1)' : 'Volver a marcar (+1)')">
+                  <span class="material-symbols-outlined text-[17px]" 
+                        [class.text-rose-600]="isFavorite(card.id)"
+                        [class.text-gray-400]="!isFavorite(card.id)"
+                        [style.font-variation-settings]="getHeartVariation(isFavorite(card.id))">
+                    favorite
+                  </span>
+                  <span class="text-xs font-black font-mono text-on-surface">
+                    {{ getCardLikes(card.id) }}
+                  </span>
                 </button>
               </div>
 
               <!-- Card Content -->
-              <div class="p-4 flex flex-col justify-between flex-grow gap-3 text-left">
+              <div class="p-4 flex flex-col justify-between flex-grow gap-2.5 text-left">
                 <div>
-                  <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider mb-1">
+                  <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1">
                     <span class="text-primary truncate pr-1">{{ card.locationName }}</span>
-                    <span class="text-on-surface font-extrabold text-sm shrink-0">{{ card.locIdNumber }}</span>
+                    <span class="text-on-surface-variant font-mono text-[10px] shrink-0">{{ card.locIdNumber }}</span>
                   </div>
+                  
                   <div class="flex items-start justify-between gap-1">
-                    <h3 class="font-bold text-base text-on-surface leading-snug line-clamp-1">
+                    <h3 class="font-bold text-sm sm:text-base text-on-surface leading-snug line-clamp-1">
                       {{ card.title }}
                     </h3>
                     @if (hasNote(card.id)) {
@@ -167,24 +234,39 @@ interface SelectedCardItem {
                       </span>
                     }
                   </div>
+
+                  <!-- Project reference tag -->
+                  <div class="mt-1 flex items-center gap-1 text-[11px] text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[14px] text-primary">folder</span>
+                    <span class="truncate">{{ card.projectTitle || currentProjectTitle() }}</span>
+                  </div>
                 </div>
 
                 <!-- Chips -->
-                <div class="flex flex-wrap gap-1.5 text-xs text-on-surface-variant">
+                <div class="flex flex-wrap gap-1 text-xs text-on-surface-variant">
                   @for (chip of card.chips; track chip) {
-                    <span class="px-2 py-0.5 rounded bg-surface-container-low border border-surface-container-high flex items-center gap-1 text-[11px]">
+                    <span class="px-2 py-0.5 rounded bg-surface-container-low border border-surface-container-high text-[10px] font-medium">
                       {{ chip }}
                     </span>
                   }
                 </div>
 
-                <!-- Bottom Footer Info -->
-                <div class="pt-2 border-t border-surface-container-high flex items-center justify-between text-xs font-medium text-on-surface-variant">
-                  <span class="flex items-center gap-1 font-semibold" [class.text-emerald-700]="card.soundCheck" [class.text-on-surface-variant]="!card.soundCheck">
-                    <span class="material-symbols-outlined text-[15px]">check_box</span> 
-                    {{ card.soundCheck ? 'Direct Sound OK' : 'Aislamiento Parcial' }}
-                  </span>
-                  <span class="font-bold text-on-surface">{{ card.areaText }}</span>
+                <!-- Bottom Status Indicator & Rule Notice -->
+                <div class="pt-2 border-t border-surface-container-high flex flex-col gap-1 text-xs">
+                  <div class="flex items-center justify-between text-on-surface-variant font-medium">
+                    <span class="flex items-center gap-1 font-semibold text-[11px]" [class.text-emerald-700]="card.soundCheck">
+                      <span class="material-symbols-outlined text-[14px]">check_box</span> 
+                      {{ card.soundCheck ? 'Direct Sound OK' : 'Aislamiento Parcial' }}
+                    </span>
+                    <span class="font-bold text-on-surface text-[11px]">{{ card.areaText }}</span>
+                  </div>
+
+                  @if (isSessionUnfavorited(card.id)) {
+                    <div class="text-[10px] font-bold text-amber-700 bg-amber-50 rounded px-2 py-0.5 flex items-center justify-between">
+                      <span>Voto retirado en esta sesión (-1)</span>
+                      <span>Límite 1x</span>
+                    </div>
+                  }
                 </div>
               </div>
 
@@ -196,24 +278,24 @@ interface SelectedCardItem {
     </main>
 
     <!-- STICKY BOTTOM ACTION BAR -->
-    @if (activeSelectedCards().length > 0) {
+    @if (rankedCards().length > 0) {
       <div class="fixed bottom-0 left-0 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur-md border-t border-surface-container-high py-3 px-6 shadow-lg animate-in slide-in-from-bottom">
         <div class="max-w-[1680px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div class="flex items-center gap-3">
             <span class="font-bold text-sm text-on-surface">
-              Total: {{ activeSelectedCards().length }} fotos y videos elegidos
+              {{ selectedForExportCount() }} locaciones seleccionadas para descarga
             </span>
-            <span class="hidden md:inline text-xs text-on-surface-variant">• Aprobación en vivo por RLS</span>
+            <span class="hidden md:inline text-xs text-on-surface-variant">• Ranking de {{ rankedCards().length }} locaciones globales</span>
           </div>
 
           <div class="flex items-center gap-2.5">
-            <button (click)="downloadCsv()" class="px-4 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer">
-              <span class="material-symbols-outlined text-[16px]">table_view</span>
+            <button (click)="downloadCsv()" class="px-4 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer border border-surface-container-high shadow-xs">
+              <span class="material-symbols-outlined text-[16px] text-emerald-600">table_view</span>
               <span>Descargar Lista CSV</span>
             </button>
-            <button (click)="confirmSelection()" class="px-5 py-2 rounded-lg bg-secondary hover:brightness-105 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
-              <span class="material-symbols-outlined text-[16px]">check_circle</span>
-              <span>Confirmar Selección de Rodaje</span>
+            <button (click)="exportDossier()" class="px-5 py-2 rounded-lg bg-primary hover:brightness-105 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+              <span>Exportar Resumen PDF</span>
             </button>
           </div>
         </div>
@@ -233,7 +315,7 @@ interface SelectedCardItem {
             <div class="flex items-center gap-2">
               <span class="font-bold text-xs sm:text-sm text-primary uppercase tracking-wider">{{ currentLightboxCard()?.locationName }}</span>
               <span class="text-white/40">•</span>
-              <span class="text-[11px] text-white/80 font-mono">{{ lightboxIdx()! + 1 }} de {{ activeSelectedCards().length }} seleccionadas</span>
+              <span class="text-[11px] text-white/80 font-mono">{{ lightboxIdx()! + 1 }} de {{ rankedCards().length }} en ranking</span>
             </div>
             <h3 class="text-base sm:text-lg font-bold text-white mt-0.5 truncate max-w-md sm:max-w-xl">{{ currentLightboxCard()?.title }}</h3>
           </div>
@@ -285,12 +367,15 @@ interface SelectedCardItem {
               </span>
             </button>
 
-            <!-- Unselect button inside lightbox -->
-            <button (click)="removeCard(currentLightboxCard()!.id, currentLightboxCard()!.title)" 
-                    class="px-3.5 py-1.5 rounded-lg bg-[#18181c] hover:bg-primary text-white border border-white/30 flex items-center gap-1.5 text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
-                    title="Desmarcar de favoritos">
-              <span class="material-symbols-outlined text-[18px] text-primary" style="font-variation-settings: 'FILL' 1;">bookmark</span>
-              <span class="hidden sm:inline">Seleccionada</span>
+            <!-- Bookmark Button inside lightbox con regla de 1 desmarcado -->
+            <button (click)="handleToggleCardSelection(currentLightboxCard()!)" 
+                    class="px-3.5 py-1.5 rounded-lg bg-[#18181c] hover:bg-white/10 text-white border border-white/30 flex items-center gap-1.5 text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+                    title="Alternar selección de favoritos">
+              <span class="material-symbols-outlined text-[18px] text-rose-500" 
+                    [style.font-variation-settings]="getHeartVariation(isFavorite(currentLightboxCard()!.id))">
+                favorite
+              </span>
+              <span>{{ getCardLikes(currentLightboxCard()!.id) }}</span>
             </button>
 
             <!-- Close button -->
@@ -363,15 +448,15 @@ interface SelectedCardItem {
                     [class.hover:bg-white]="!currentNote()"
                     [class.hover:text-black]="!currentNote()">
               <span class="material-symbols-outlined text-[18px]">edit_note</span>
-              <span>{{ currentNote() ? 'Editar Nota de DP' : 'Añadir Nota de DP' }}</span>
+              <span>{{ currentNote() ? 'Ver / Responder Nota DP' : 'Añadir Nota de DP' }}</span>
             </button>
           </div>
         </div>
 
-        <!-- MODAL INTERACTIVO DE NOTA DE DP -->
+        <!-- MODAL INTERACTIVO DE NOTA DE DP CON CHAT SOCIAL DE RODAJE -->
         @if (isDpNoteModalOpen()) {
-          <div class="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in" (click)="closeDpNoteModal()">
-            <div class="bg-[#141418] border-2 border-white/30 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 text-left text-white" (click)="$event.stopPropagation()">
+          <div class="fixed inset-0 z-60 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in" (click)="closeDpNoteModal()">
+            <div class="bg-[#141418] border-2 border-white/30 rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl flex flex-col gap-4 text-left text-white max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
               
               <!-- Modal Header -->
               <div class="flex items-start justify-between pb-3 border-b border-white/15">
@@ -380,7 +465,7 @@ interface SelectedCardItem {
                     <span class="material-symbols-outlined text-2xl">movie_filter</span>
                   </div>
                   <div class="flex flex-col">
-                    <h3 class="font-bold text-base text-white">Nota Técnica de Dirección de Fotografía (DP)</h3>
+                    <h3 class="font-bold text-base text-white">Nota Técnica & Chat de Rodaje (DP / Producción)</h3>
                     <span class="text-xs text-white/70">{{ currentLightboxCard()?.locationName }} • {{ currentLightboxCard()?.title }}</span>
                   </div>
                 </div>
@@ -389,9 +474,28 @@ interface SelectedCardItem {
                 </button>
               </div>
 
+              <!-- Hilo de Conversación / Respuestas del Chat Social -->
+              @if (currentNote() && currentNote()?.replies && currentNote()!.replies!.length > 0) {
+                <div class="flex flex-col gap-2 p-3 bg-white/5 rounded-xl border border-white/10 max-h-48 overflow-y-auto">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-white/60">Respuestas del Equipo de Producción:</span>
+                  @for (rep of currentNote()!.replies; track rep.id) {
+                    <div class="flex flex-col gap-1 p-2 rounded-lg bg-white/5 border border-white/10 text-xs">
+                      <div class="flex items-center justify-between text-[11px]">
+                        <span class="font-bold text-amber-300 flex items-center gap-1">
+                          <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                          {{ rep.author }} ({{ rep.role }})
+                        </span>
+                        <span class="text-white/50 text-[10px]">{{ rep.timestamp }}</span>
+                      </div>
+                      <p class="text-white/90 leading-relaxed pl-2.5">{{ rep.message }}</p>
+                    </div>
+                  }
+                </div>
+              }
+
               <!-- Categoría / Especialidad -->
               <div>
-                <label class="block text-xs font-bold text-white/80 uppercase tracking-wider mb-2">Especialidad de la Nota:</label>
+                <label class="block text-xs font-bold text-white/80 uppercase tracking-wider mb-2">Especialidad Técnica:</label>
                 <div class="flex flex-wrap gap-1.5">
                   @for (cat of ['Lentes / Óptica', 'Iluminación / Sol', 'Grip / Cámara', 'Eléctrico / Planta', 'Arte & Set']; track cat) {
                     <button type="button" 
@@ -411,7 +515,7 @@ interface SelectedCardItem {
 
               <!-- Quick presets / suggestions -->
               <div>
-                <label class="block text-[11px] font-medium text-white/60 mb-1">Sugerencias rápidas de rodaje:</label>
+                <label class="block text-[11px] font-medium text-white/60 mb-1">Sugerencias rápidas:</label>
                 <div class="flex flex-wrap gap-1.5">
                   <button type="button" (click)="appendPreset('Lente anamórfico 35mm')" class="text-[11px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/15 text-white/70 border border-white/10 cursor-pointer">
                     + Anamórfico 35mm
@@ -419,8 +523,8 @@ interface SelectedCardItem {
                   <button type="button" (click)="appendPreset('Hora mágica 17:30h')" class="text-[11px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/15 text-white/70 border border-white/10 cursor-pointer">
                     + Hora mágica 17:30h
                   </button>
-                  <button type="button" (click)="appendPreset('Riel de dolly sobre piso')" class="text-[11px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/15 text-white/70 border border-white/10 cursor-pointer">
-                    + Riel de dolly
+                  <button type="button" (click)="appendPreset('Riel dolly sobre piso')" class="text-[11px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/15 text-white/70 border border-white/10 cursor-pointer">
+                    + Riel dolly
                   </button>
                   <button type="button" (click)="appendPreset('Acometida trifásica 80A')" class="text-[11px] px-2 py-0.5 rounded bg-white/5 hover:bg-white/15 text-white/70 border border-white/10 cursor-pointer">
                     + Trifásica 80A
@@ -456,13 +560,34 @@ interface SelectedCardItem {
                 />
               </div>
 
+              <!-- Quick reply input para social chat si ya existe la nota -->
+              @if (currentNote()) {
+                <div class="pt-2 border-t border-white/15">
+                  <label class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-1">
+                    Responder en este hilo de rodaje:
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <input 
+                      type="text"
+                      [(ngModel)]="quickReplyText"
+                      (keyup.enter)="sendQuickReply()"
+                      placeholder="Escribe una actualización o respuesta técnica..."
+                      class="flex-grow bg-[#0a0a0d] border border-white/30 focus:border-amber-400 rounded-lg px-3 py-2 text-white text-xs placeholder:text-white/40 focus:outline-none"
+                    />
+                    <button type="button" (click)="sendQuickReply()" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-lg cursor-pointer whitespace-nowrap">
+                      Enviar
+                    </button>
+                  </div>
+                </div>
+              }
+
               <!-- Action buttons -->
               <div class="flex items-center justify-between pt-2 border-t border-white/15">
                 <div>
                   @if (currentNote()) {
                     <button type="button" (click)="deleteDpNote()" class="px-3 py-2 rounded-lg bg-rose-900/40 hover:bg-rose-700 text-rose-200 text-xs font-bold transition-colors cursor-pointer border border-rose-500/40 flex items-center gap-1">
                       <span class="material-symbols-outlined text-[15px]">delete</span>
-                      <span>Eliminar Nota</span>
+                      <span>Eliminar</span>
                     </button>
                   }
                 </div>
@@ -473,7 +598,7 @@ interface SelectedCardItem {
                   </button>
                   <button type="button" (click)="saveDpNote()" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">save</span>
-                    <span>Guardar Nota de DP</span>
+                    <span>Guardar Nota</span>
                   </button>
                 </div>
               </div>
@@ -486,18 +611,40 @@ interface SelectedCardItem {
     }
   `
 })
-export class SelectedMediaComponent {
+export class SelectedMediaComponent implements OnInit {
   private favoritesService = inject(FavoritesService);
   private projectsService = inject(ProjectsService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   public lastToast = computed(() => this.favoritesService.lastToast());
   public lightboxIdx = signal<number | null>(null);
 
-  // Catálogo completo de tarjetas de selección con los datos fieles al prototipo Stitch Screen 2
+  // Filtro de proyectos: 'all' = Top Global de todos los proyectos
+  public activeProjectFilter = signal<string>('all');
+
+  // Selección individual para exportar a CSV / PDF
+  public exportSelectedIds = signal<Set<string>>(new Set());
+
+  // Catálogo maestro base con datos cinematográficos
   private masterCards: SelectedCardItem[] = [
     {
+      id: 'm-ped-hero',
+      projectId: '10000000-0000-4000-8000-000000000001',
+      projectTitle: 'Campaña Global Verano 2026',
+      locationName: 'Villa Moderna Pedregal',
+      locIdNumber: '#01',
+      title: 'Vista Panorámica & Alberca Principal',
+      src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAy9EMuNJ2GaP_hzO-fFen3OUMamZcxEqADXl9d3Uvs7F9K8wenkBoy7Zp5rjlLrapMYx-v2AbpewwN7a9kCGz5o3ABk8_sIhYMGnbRHCDmwUbVfSmmIWAAA7lhY-HTw1xQWJcVw7jxXgDDtQeXJe2hRS5u9HG5iGsBK6CWH6bsJDm6qpH4tWkhmYzJEPuvo6qoCcIRMt9HE-0ie1-EVj8MeqRGCcrp2ayNJUuyfzlGJuRL7DnMtj8Y',
+      specs: 'Luz Poniente (16-19h) • Techo 5.2m • Acceso Grúa Techno 30',
+      chips: ['Luz Poniente', 'Techo 5.2m', 'Grúa Techno 30'],
+      areaText: '600 m²',
+      soundCheck: true
+    },
+    {
       id: 'm-ped-4',
+      projectId: '10000000-0000-4000-8000-000000000001',
+      projectTitle: 'Campaña Global Verano 2026',
       locationName: 'Villa Moderna Pedregal',
       locIdNumber: '#01',
       title: 'Salón Principal & Estanque',
@@ -508,20 +655,11 @@ export class SelectedMediaComponent {
       soundCheck: true
     },
     {
-      id: 'm-ped-5',
-      locationName: 'Villa Moderna Pedregal',
-      locIdNumber: '#02',
-      title: 'Galería de Concreto & Tragaluz',
-      src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDe7k0BeMVrh_AzDXykrDAgC5nslus1lOvPKMjyES3bj0OlMI74DKNSLW0XP7b9rFU_g6wDeBvVE0_OsQd5y4mM1Hpih5MuVz6Fvqg4ZQCPWHfJzCVmkZklLqqYoDlAYySIPsRBANm0sHcyT1jOjM6JOeJGR2aUSQwHRz7AuirQKu0pcVVCUV-Ufb76dImB-eBDiUZA9v0X59YO6ZQ-lbdBIgmNfjt0YRQuLF-ZXnOQdoN85nnevxH3',
-      specs: 'Luz Cenital • Techo 5.0m • Trifásica 63A',
-      chips: ['Luz Cenital', 'Techo 5.0m', 'Trifásica 63A'],
-      areaText: '220 m²',
-      soundCheck: true
-    },
-    {
       id: 'm-hang-1',
+      projectId: '10000000-0000-4000-8000-000000000001',
+      projectTitle: 'Campaña Global Verano 2026',
       locationName: 'Hangar San Telmo',
-      locIdNumber: '#01',
+      locIdNumber: '#02',
       title: 'Nave Principal Industrial',
       src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA3w_F6sEyCIH4qWyI6kQX-RlXoVaUo2HtLiJUugLYP4V3u0LeFQez4Uk5_HRen6iUMXza6-wL_jhVrSiUYLV4z30oY1CGMwl0WGMOMUM8z5vRN2Zh7WR0CfRFP-DkNbWrxTMU9_XoRHMJw9ey6wq3vPWNGhLdYchxJxviXcUbfV7dd8iBHtYodWj47O3umLXuxoHhmN_NuXoNGWhJpw8_q120npfFZjc4w28pyqH-b1lMce9YegsX2',
       specs: '1,200 m² libres • Altura: 9.0m • Trifásica 125A',
@@ -530,9 +668,37 @@ export class SelectedMediaComponent {
       soundCheck: true
     },
     {
-      id: 'm-ped-6',
+      id: 'm-ped-1',
+      projectId: '10000000-0000-4000-8000-000000000001',
+      projectTitle: 'Campaña Global Verano 2026',
       locationName: 'Villa Moderna Pedregal',
-      locIdNumber: '#03',
+      locIdNumber: '#01',
+      title: 'Fachada & Entrada Principal',
+      src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC75aW0F1U95kLd752T_zQ1q8pAky9qgJ4z1QZz6uL7mR2uV3xT9rY1aZ3xW6vB8nM2kL4pQ7sT1uV9xY2aC5bN8mK3jL6pQ9rT2uV5wX8yZ1aC4bN7mK2jL5pQ8rT1uV4wX7yZ0aC3bN6mK1jL4pQ7rT0uV3wX6yZ9aC2bN5mK0jL3pQ6rS',
+      specs: 'Riel Dolly • Piso Basalto • Luz Cenital',
+      chips: ['Riel Dolly', 'Piso Basalto', 'Luz Cenital'],
+      areaText: '310 m²',
+      soundCheck: true
+    },
+    {
+      id: 'm-col-1',
+      projectId: '20000000-0000-4000-8000-000000000002',
+      projectTitle: 'Campaña Primavera-Costa 2026',
+      locationName: 'Casa Colonial Coyoacán',
+      locIdNumber: '#01',
+      title: 'Patio de Arcos & Fuente Colonial',
+      src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBpo0oR3fnz9lpS_RgyVwDGPtebCF1WXCFfL_0Kx9Y47SSh0KHH927XVVOp4dQCU6-Z_tENgbvO3IgnicC8GE3RuQDMGxgS3GvhuUFqLxnpVJektX49KeEkgQadm0mI6lRXEqLuO9xXlsBqhb6vMdAojUhETBx_WqJxS-Y1J32RBCSsoJsi1pLDhuwMwXgYRueoTET-95Kbq0RNwJYAVIjmKTk4yVME3bPdtOrmcrCHzeHAq305gOI6',
+      specs: 'Cantera Rosa • Techo 4.2m • Siglo XVIII',
+      chips: ['Cantera Rosa', 'Techo 4.2m', 'Siglo XVIII'],
+      areaText: '520 m²',
+      soundCheck: true
+    },
+    {
+      id: 'm-ped-6',
+      projectId: '10000000-0000-4000-8000-000000000001',
+      projectTitle: 'Campaña Global Verano 2026',
+      locationName: 'Villa Moderna Pedregal',
+      locIdNumber: '#01',
       title: 'Terraza Panorámica & Deck',
       src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDxBkxaGoY0Jcgbk7niYgO-MpbH3j0yql5rjFHA9xMrb8CU0fKv4fDbIb-UlJY9zGnXTIOHF_pC37DIMFwoRBYtPhtBflRoNW4ju0GvvzZUu2Cmr8z1TdYqU_1I86FXvKLDGuiA0jeslQPz9GcQ831CiPinE3fheYgc0KjtulXdTfMtxbkWCk5W_fcNGB1t3bkIB4OTZ2X2BTiMVSvYTi7Yau9_Z3eVjO4EM35nVJXjl15TfjW3scsI',
       specs: 'Deck Teca • Alberca • Luz Tarde',
@@ -541,60 +707,76 @@ export class SelectedMediaComponent {
       soundCheck: false
     },
     {
-      id: 'm-col-1',
-      locationName: 'Casa Colonial Coyoacán',
+      id: 'm-ped-5',
+      projectId: '10000000-0000-4000-8000-000000000001',
+      projectTitle: 'Campaña Global Verano 2026',
+      locationName: 'Villa Moderna Pedregal',
       locIdNumber: '#01',
-      title: 'Patio de Arcos & Fuente',
-      src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBpo0oR3fnz9lpS_RgyVwDGPtebCF1WXCFfL_0Kx9Y47SSh0KHH927XVVOp4dQCU6-Z_tENgbvO3IgnicC8GE3RuQDMGxgS3GvhuUFqLxnpVJektX49KeEkgQadm0mI6lRXEqLuO9xXlsBqhb6vMdAojUhETBx_WqJxS-Y1J32RBCSsoJsi1pLDhuwMwXgYRueoTET-95Kbq0RNwJYAVIjmKTk4yVME3bPdtOrmcrCHzeHAq305gOI6',
-      specs: 'Cantera Rosa • Techo 4.2m • Siglo XVIII',
-      chips: ['Cantera Rosa', 'Techo 4.2m', 'Siglo XVIII'],
-      areaText: '520 m²',
+      title: 'Galería de Concreto & Tragaluz',
+      src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDe7k0BeMVrh_AzDXykrDAgC5nslus1lOvPKMjyES3bj0OlMI74DKNSLW0XP7b9rFU_g6wDeBvVE0_OsQd5y4mM1Hpih5MuVz6Fvqg4ZQCPWHfJzCVmkZklLqqYoDlAYySIPsRBANm0sHcyT1jOjM6JOeJGR2aUSQwHRz7AuirQKu0pcVVCUV-Ufb76dImB-eBDiUZA9v0X59YO6ZQ-lbdBIgmNfjt0YRQuLF-ZXnOQdoN85nnevxH3',
+      specs: 'Luz Cenital • Techo 5.0m • Trifásica 63A',
+      chips: ['Luz Cenital', 'Techo 5.0m', 'Trifásica 63A'],
+      areaText: '220 m²',
       soundCheck: true
     },
     {
-      id: 'm-hang-2',
-      locationName: 'Hangar San Telmo',
-      locIdNumber: '#02',
-      title: 'Mezzanine & Rampa Técnica',
-      src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDq-UcK-XhS5gT17ltdoHS7fkjzGAuS0AF1cnj-j6xkfGJ_mlzEziAP5vtnAk6nIWD6DXwDeYWdoFIXDw-c0WQ3pNL6qDRcBvc2AfL7DkVl3mfiy5LtsohMdk7j8lZRL-bR6it3DUm6p8PZdTFStE_3LeAHfQYqoo3W54ZtpmjSO4SYoGbJeYoTbIUvkTT-vaOnF7c7oIzW9_FXoUEiW7hWvItCBbNdbILa_eRZhwPzh7npnNykkd3V',
-      specs: 'Vista Cenital • Estructura Acero • Rampa',
-      chips: ['Vista Cenital', 'Estructura Acero', 'Rampa 10T'],
-      areaText: '300 m²',
-      soundCheck: false
-    },
-    {
       id: 'm-ped-7',
+      projectId: '10000000-0000-4000-8000-000000000001',
+      projectTitle: 'Campaña Global Verano 2026',
       locationName: 'Villa Moderna Pedregal',
-      locIdNumber: '#04',
+      locIdNumber: '#01',
       title: 'Suite Master & Vestidor',
       src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuANTRn6Jabv7G8DI7CBT0y6qx6nPZ8MZBCcehfzRcyyXqcU3XAOW7Tnh5OjtNl5OlOqG3u2pRWa9E3VX--sUhHQTgKNaiD2qd-Ypgs6yp_j3d_rBNaXRukeYfOYOZzt4vhl5jrddCz9Zll8dsNZQlK6JlC2ZgiT1006bDOz_bJMtHhEHpIQSatKqy-oEdklHP-4IkWiD6NAoy2sxru6l4EM84fdaySHUCu0lhMynfAHO1nOV4_usEH4',
       specs: 'Roble Natural • f/1.4 • Set Íntimo',
       chips: ['Roble Natural', 'f/1.4', 'Set Íntimo'],
       areaText: '140 m²',
       soundCheck: true
+    },
+    {
+      id: 'm-hang-2',
+      projectId: '10000000-0000-4000-8000-000000000001',
+      projectTitle: 'Campaña Global Verano 2026',
+      locationName: 'Hangar San Telmo',
+      locIdNumber: '#02',
+      title: 'Mezzanine & Rampa Técnica',
+      src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDq-UcK-XhS5gT17ltdoHS7fkjzGAuS0AF1cnj-j6xkfGJ_mlzEziAP5vtnAk6nIWD6DXwDeYWdoFIXDw-c0WQ3pNL6qDRcBvc2AfL7DkVl3mfiy5LtsohMdk7j8lZRL-bR6it3DUm6p8PZdTFStE_3LeAHfQYqoo3W54ZtpmjSO4SYoGbJeYoTbIUvkTT-vaOnF7c7oIzW9_FXoUEiW7hWvItCBbNdbILa_eRZhwPzh7npnNykkd3V',
+      specs: 'Vista Cenital • Estructura Acero • Rampa 10T',
+      chips: ['Vista Cenital', 'Estructura Acero', 'Rampa 10T'],
+      areaText: '300 m²',
+      soundCheck: false
     }
   ];
 
   public isDownloadMenuOpen = signal<boolean>(false);
-  public currentProject = computed(() => this.projectsService.currentProject() || this.projectsService.allProjects()[0]);
+  public availableProjects = computed(() => this.projectsService.allProjects());
+  public currentProject = computed(() => this.projectsService.currentProject() || this.availableProjects()[0]);
   public currentProjectTitle = computed(() => this.currentProject()?.title || 'Campaña Global Verano 2026');
-  public currentProjectId = computed(() => this.currentProject()?.id || '10000000-0000-4000-8000-000000000001');
 
+  ngOnInit() {
+    // Inicializar exportación seleccionando todas las tarjetas maestras por defecto
+    const allIds = new Set(this.masterCards.map(c => c.id));
+    this.exportSelectedIds.set(allIds);
+  }
+
+  // Lista combinada de todas las tarjetas disponibles en la plataforma
   public allAvailableCards = computed<SelectedCardItem[]>(() => {
-    const cards: SelectedCardItem[] = [];
+    const list: SelectedCardItem[] = [];
     const projs = this.projectsService.allProjects();
+
     for (const proj of projs) {
       for (const loc of proj.locations || []) {
         for (const sec of loc.sections || []) {
           for (const m of sec.media || []) {
-            cards.push({
+            list.push({
               id: m.id,
+              projectId: proj.id,
+              projectTitle: proj.title,
               locationName: loc.title,
               locIdNumber: '#' + loc.id.slice(-2),
               title: m.title,
               src: m.url || '',
               specs: (m.width ? `${m.width}x${m.height} • ` : '') + (m.mime || 'image/webp'),
-              chips: [loc.title, m.mime ? m.mime.replace('image/', '').toUpperCase() : '4K RAW', m.type === 'video' ? 'Video 4K' : 'Foto Hi-Res'],
+              chips: [proj.title, loc.title, m.mime ? m.mime.replace('image/', '').toUpperCase() : '4K RAW'],
               areaText: 'Locación Aprobada',
               soundCheck: true
             });
@@ -602,30 +784,109 @@ export class SelectedMediaComponent {
         }
       }
     }
+
+    // Agregar las tarjetas maestras enriquecidas
     for (const mc of this.masterCards) {
-      if (!cards.some(c => c.id === mc.id)) {
-        cards.push(mc);
+      const existingIdx = list.findIndex(c => c.id === mc.id);
+      if (existingIdx >= 0) {
+        list[existingIdx] = { ...list[existingIdx], ...mc };
+      } else {
+        list.push(mc);
       }
     }
-    return cards;
+
+    return list;
   });
 
-  public activeSelectedCards = computed(() => {
-    const favSet = this.favoritesService.selectedMediaIds();
-    return this.allAvailableCards().filter(c => favSet.has(c.id));
-  });
+  // Top de Seleccionadas Ordenadas por Número de Votos de Clientes Descendente
+  public rankedCards = computed(() => {
+    let cards = this.allAvailableCards();
+    const filter = this.activeProjectFilter();
 
-  public locationBreakdown = computed(() => {
-    const counts = new Map<string, number>();
-    for (const card of this.activeSelectedCards()) {
-      counts.set(card.locationName, (counts.get(card.locationName) || 0) + 1);
+    if (filter !== 'all') {
+      cards = cards.filter(c => c.projectId === filter);
     }
-    return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+
+    // Ordenar de mayor a menor número de selecciones de clientes
+    return [...cards].sort((a, b) => {
+      const likesA = this.favoritesService.getLikes(a.id);
+      const likesB = this.favoritesService.getLikes(b.id);
+      return likesB - likesA;
+    });
   });
+
+  public selectedForExportCount = computed(() => {
+    const set = this.exportSelectedIds();
+    return this.rankedCards().filter(c => set.has(c.id)).length;
+  });
+
+  setProjectFilter(projectId: string) {
+    this.activeProjectFilter.set(projectId);
+    this.favoritesService.triggerToast(
+      projectId === 'all' 
+        ? 'Mostrando Top Global de todos los proyectos' 
+        : `Filtrando por: ${this.availableProjects().find(p => p.id === projectId)?.title || 'Proyecto'}`
+    );
+  }
+
+  isCardSelectedForExport(id: string): boolean {
+    return this.exportSelectedIds().has(id);
+  }
+
+  toggleCardExportCheck(id: string, event: Event) {
+    event.stopPropagation();
+    const current = new Set(this.exportSelectedIds());
+    if (current.has(id)) {
+      current.delete(id);
+    } else {
+      current.add(id);
+    }
+    this.exportSelectedIds.set(current);
+  }
+
+  selectAllForExport() {
+    const current = new Set(this.exportSelectedIds());
+    for (const c of this.rankedCards()) {
+      current.add(c.id);
+    }
+    this.exportSelectedIds.set(current);
+    this.favoritesService.triggerToast('Todas las locaciones del ranking marcadas para exportar.');
+  }
+
+  deselectAllForExport() {
+    const current = new Set(this.exportSelectedIds());
+    for (const c of this.rankedCards()) {
+      current.delete(c.id);
+    }
+    this.exportSelectedIds.set(current);
+    this.favoritesService.triggerToast('Selección de exportación vaciada.');
+  }
+
+  // Regla de votación / 1 desmarcado por sesión
+  isFavorite(id: string): boolean {
+    return this.favoritesService.isFavorite(id);
+  }
+
+  isSessionUnfavorited(id: string): boolean {
+    return this.favoritesService.hasSessionUnfavorited(id);
+  }
+
+  getCardLikes(id: string): number {
+    return this.favoritesService.getLikes(id);
+  }
+
+  getHeartVariation(isFav: boolean): string {
+    return isFav ? "'FILL' 1" : "'FILL' 0";
+  }
+
+  handleToggleCardSelection(card: SelectedCardItem) {
+    const res = this.favoritesService.toggleFavoriteWithSessionRule(card.id, card.title);
+    // Notificación y feedback ya emitidos por FavoritesService
+  }
 
   public currentLightboxCard = computed(() => {
     const idx = this.lightboxIdx();
-    const cards = this.activeSelectedCards();
+    const cards = this.rankedCards();
     if (idx === null || idx < 0 || idx >= cards.length) return null;
     return cards[idx];
   });
@@ -654,37 +915,186 @@ export class SelectedMediaComponent {
     }
   }
 
-  removeCard(id: string, name: string) {
-    this.favoritesService.removeFavorite(id, name);
-  }
-
   copyShareLink() {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
-      this.favoritesService.triggerToast('Enlace de selección copiado al portapapeles.');
+      this.favoritesService.triggerToast('Enlace de ranking de seleccionadas copiado al portapapeles.');
     } else {
       this.favoritesService.triggerToast('Enlace listo para compartir.');
     }
   }
 
-  exportDossier() {
-    this.favoritesService.triggerToast('Generando compilación PDF técnica de locaciones seleccionadas...');
-  }
-
+  // Descarga real de CSV con UTF-8 BOM
   downloadCsv() {
-    this.favoritesService.triggerToast('Descargando lista CSV de locaciones y especificaciones técnicas...');
+    const cardsToExport = this.rankedCards().filter(c => this.exportSelectedIds().has(c.id));
+    if (cardsToExport.length === 0) {
+      this.favoritesService.triggerToast('Por favor selecciona al menos una locación con la casilla "Exportar" para generar el CSV.', 'warning');
+      return;
+    }
+
+    const headers = [
+      'Ranking',
+      'Locación',
+      'Proyecto',
+      'Encuadre Técnico',
+      'Votos Selecciones Clientes',
+      'Estado Nota DP',
+      'Especificaciones Técnicas',
+      'Superficie',
+      'Sonido Directo',
+      'Formato Master'
+    ];
+
+    const rows = cardsToExport.map((card, idx) => {
+      const likes = this.favoritesService.getLikes(card.id);
+      const note = this.favoritesService.getNote(card.id);
+      const noteStatus = note 
+        ? `Activa [${note.category}]: "${note.noteText.replace(/"/g, '""')}"` 
+        : 'Sin nota técnica';
+
+      return [
+        `#${idx + 1}`,
+        `"${card.locationName.replace(/"/g, '""')}"`,
+        `"${(card.projectTitle || this.currentProjectTitle()).replace(/"/g, '""')}"`,
+        `"${card.title.replace(/"/g, '""')}"`,
+        likes,
+        `"${noteStatus}"`,
+        `"${card.specs.replace(/"/g, '""')}"`,
+        `"${card.areaText}"`,
+        card.soundCheck ? 'Direct Sound OK' : 'Aislamiento Parcial',
+        `"4K Master RAW WebP"`
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `PFE_Locaciones_Seleccionadas_${new Date().getFullYear()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    this.favoritesService.triggerToast(`Lista CSV de ${cardsToExport.length} locaciones seleccionadas descargada correctamente.`);
   }
 
-  confirmSelection() {
-    this.favoritesService.triggerToast('Selección confirmada para coordinación de permisos y rodaje.');
+  // Exportar Resumen PDF Imprimible Real
+  exportDossier() {
+    const cardsToExport = this.rankedCards().filter(c => this.exportSelectedIds().has(c.id));
+    if (cardsToExport.length === 0) {
+      this.favoritesService.triggerToast('Por favor selecciona al menos una locación con la casilla "Exportar" para generar el resumen PDF.', 'warning');
+      return;
+    }
+
+    this.favoritesService.triggerToast(`Generando Resumen Ejecutivo PDF con ${cardsToExport.length} locaciones seleccionadas...`);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <title>PFE Scouting — Resumen Ejecutivo de Locaciones Seleccionadas</title>
+        <style>
+          @page { size: A4 portrait; margin: 15mm; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111; margin: 0; padding: 20px; line-height: 1.5; }
+          .header { border-bottom: 3px solid #111; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+          .brand { font-size: 24px; font-weight: 900; letter-spacing: -0.5px; }
+          .badge { background: #000; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+          .meta { font-size: 12px; color: #555; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; page-break-inside: avoid; }
+          .card { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; page-break-inside: avoid; margin-bottom: 16px; background: #fafafa; }
+          .card img { width: 100%; height: 180px; object-fit: cover; display: block; }
+          .card-content { padding: 12px; }
+          .loc-name { font-size: 11px; font-weight: 800; color: #0284c7; text-transform: uppercase; }
+          .loc-title { font-size: 15px; font-weight: 800; margin: 2px 0 6px; }
+          .specs { font-size: 11px; color: #444; margin-bottom: 6px; }
+          .rank-tag { display: inline-block; background: #fef08a; color: #713f12; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 900; margin-right: 6px; }
+          .dp-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 8px; margin-top: 8px; font-size: 11px; color: #92400e; }
+          .footer { margin-top: 30px; border-top: 1px solid #ddd; padding-top: 10px; font-size: 11px; color: #777; display: flex; justify-content: space-between; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="brand">PFE SCOUTING • LOCACIONES DE PRODUCCIÓN</div>
+            <div class="meta">Resumen Ejecutivo de Locaciones Seleccionadas por el Equipo • ${new Date().toLocaleDateString()}</div>
+          </div>
+          <div>
+            <span class="badge">TOP GLOBAL</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 16px; font-size: 13px; color: #333;">
+          Total de locaciones incluidas en este resumen: <strong>${cardsToExport.length}</strong>. Aprobado para gestión de scouting técnico y permisos de rodaje.
+        </div>
+
+        <div class="grid">
+          ${cardsToExport.map((c, i) => {
+            const likes = this.favoritesService.getLikes(c.id);
+            const note = this.favoritesService.getNote(c.id);
+            return `
+              <div class="card">
+                <img src="${c.src}" alt="${c.title}"/>
+                <div class="card-content">
+                  <div class="loc-name"><span class="rank-tag">#${i + 1} • ${likes} VOTOS</span> ${c.locationName}</div>
+                  <div class="loc-title">${c.title}</div>
+                  <div class="specs"><strong>Proyecto:</strong> ${c.projectTitle || this.currentProjectTitle()}</div>
+                  <div class="specs"><strong>Detalles:</strong> ${c.specs}</div>
+                  <div class="specs"><strong>Superficie:</strong> ${c.areaText} • <strong>Sonido:</strong> ${c.soundCheck ? 'Direct Sound OK' : 'Aislamiento Parcial'}</div>
+                  ${note ? `
+                    <div class="dp-box">
+                      <strong>Nota DP [${note.category}]:</strong> "${note.noteText}" — <em>${note.author}</em>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="footer">
+          <span>PFE Production Facilities • Documento Confidencial Protegido por NDA</span>
+          <span>Página 1 de 1</span>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 400);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (!win) {
+      // Si el navegador bloquea el pop-up, descargar el HTML directamente
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `PFE_Resumen_Ejecutivo_Seleccionadas_${new Date().getFullYear()}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   }
 
+  // Lightbox controls
   public zoomLevel = signal<number>(1);
   public isNativeFullscreen = signal<number | boolean>(false);
 
   openLightbox(idx: number) {
     this.lightboxIdx.set(idx);
     this.zoomLevel.set(1);
+    const card = this.rankedCards()[idx];
+    if (card) {
+      this.favoritesService.recordMediaClick(card.id);
+    }
     document.body.style.overflow = 'hidden';
   }
 
@@ -711,26 +1121,33 @@ export class SelectedMediaComponent {
   }
 
   prevLightbox() {
-    const total = this.activeSelectedCards().length;
+    const total = this.rankedCards().length;
     if (total === 0) return;
     const current = this.lightboxIdx() ?? 0;
-    this.lightboxIdx.set((current - 1 + total) % total);
+    const newIdx = (current - 1 + total) % total;
+    this.lightboxIdx.set(newIdx);
     this.zoomLevel.set(1);
+    const card = this.rankedCards()[newIdx];
+    if (card) this.favoritesService.recordMediaClick(card.id);
   }
 
   nextLightbox() {
-    const total = this.activeSelectedCards().length;
+    const total = this.rankedCards().length;
     if (total === 0) return;
     const current = this.lightboxIdx() ?? 0;
-    this.lightboxIdx.set((current + 1) % total);
+    const newIdx = (current + 1) % total;
+    this.lightboxIdx.set(newIdx);
     this.zoomLevel.set(1);
+    const card = this.rankedCards()[newIdx];
+    if (card) this.favoritesService.recordMediaClick(card.id);
   }
 
-  // Control de Notas de DP
+  // DP Notes Modal & Chat Social
   public isDpNoteModalOpen = signal<boolean>(false);
   public noteInputText: string = '';
   public noteCategory = signal<string>('Lentes / Óptica');
   public noteAuthor: string = 'Director de Fotografía (DP)';
+  public quickReplyText: string = '';
 
   public currentNote = computed<DpNote | undefined>(() => {
     const cur = this.currentLightboxCard();
@@ -759,6 +1176,7 @@ export class SelectedMediaComponent {
       this.noteCategory.set('Lentes / Óptica');
       this.noteAuthor = 'Director de Fotografía (DP)';
     }
+    this.quickReplyText = '';
     this.isDpNoteModalOpen.set(true);
   }
 
@@ -781,8 +1199,26 @@ export class SelectedMediaComponent {
       this.favoritesService.triggerToast('Por favor escribe el requerimiento técnico para la nota.', 'warning');
       return;
     }
-    this.favoritesService.saveNote(cur.id, this.noteInputText, this.noteCategory(), this.noteAuthor);
+    this.favoritesService.saveNote(
+      cur.id, 
+      this.noteInputText, 
+      this.noteCategory(), 
+      this.noteAuthor,
+      {
+        locationName: cur.locationName,
+        mediaTitle: cur.title,
+        mediaThumbnailUrl: cur.src,
+        projectId: cur.projectId
+      }
+    );
     this.isDpNoteModalOpen.set(false);
+  }
+
+  sendQuickReply() {
+    const cur = this.currentLightboxCard();
+    if (!cur || !this.quickReplyText.trim()) return;
+    this.favoritesService.addReplyToNote(cur.id, this.quickReplyText, this.noteAuthor || 'DP', 'DP');
+    this.quickReplyText = '';
   }
 
   deleteDpNote() {

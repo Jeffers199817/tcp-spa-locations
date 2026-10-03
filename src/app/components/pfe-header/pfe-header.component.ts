@@ -337,6 +337,63 @@ export class PfeHeaderComponent {
 
   simulateDossierDownload() {
     this.isDossierModalOpen.set(false);
-    this.favoritesService.triggerToast('Compilación de Dossier PDF generada exitosamente.');
+    const proj = this.currentProject();
+    if (!proj) return;
+    const filename = `Dossier_Tecnico_${proj.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_2026.html`;
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="utf-8">
+        <title>Dossier Técnico Oficial — ${proj.title}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; color: #111; line-height: 1.5; }
+          .header { border-bottom: 3px solid #b91c1c; padding-bottom: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }
+          .badge { background: #b91c1c; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+          .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+          th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; }
+          th { background: #f9fafb; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <span class="badge">PFE Locaciones • Dossier de Rodaje</span>
+            <h1 style="margin: 6px 0 2px 0; font-size: 24px;">${proj.title}</h1>
+            <p style="margin:0; font-size: 12px; color: #666;">Código: <strong>${proj.accessCode}</strong> • Revisión v${proj.revision}.0 Aprobada</p>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #666;">
+            <div>Fecha: ${new Date().toLocaleDateString('es-ES')}</div>
+            <div>Mesa de Producción: 24/7 Hotline</div>
+          </div>
+        </div>
+        <p style="font-size: 13px; color: #444;">Dossier completo de scouting con fichas técnicas, acometidas trifásicas, orientación de luz solar y direct sound verificado.</p>
+        ${(proj.locations || []).map((loc, idx) => `
+          <div class="card">
+            <h3 style="margin:0 0 8px 0;">${idx + 1}. ${loc.title}</h3>
+            <p style="font-size: 12px; color: #555; margin: 0 0 10px 0;">${loc.description || 'Recinto técnico verificado'}</p>
+            <table>
+              <tr><th>Parámetro</th><th>Especificación Técnica</th></tr>
+              <tr><td>Capacidad Eléctrica</td><td>Acometida trifásica 80A - 125A protegida. Apta para generadores 60kW - 100kW.</td></tr>
+              <tr><td>Estudio de Sonido</td><td>Direct Sound Verificado. Sin interferencias de tráfico pesado en horarios de llamado.</td></tr>
+              <tr><td>Logística de Acceso</td><td>Radio de giro para camiones 10T y estacionamiento para unidad móvil.</td></tr>
+            </table>
+          </div>
+        `).join('')}
+        <script>window.print();</script>
+      </body>
+      </html>
+    `;
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (!win) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+    }
+    this.favoritesService.triggerToast(`Dossier PDF generado para "${proj.title}".`);
   }
 }

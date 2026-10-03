@@ -31,15 +31,15 @@ interface LightboxItem {
     <main class="w-full pt-16 bg-surface min-h-[calc(100vh-80px)] font-body-md text-on-surface antialiased">
       <div class="flex flex-col w-full">
 
-        <!-- Toast Notifier (Supabase Realtime) -->
-        <div class="fixed bottom-6 right-6 z-50 transform transition-all duration-300 pointer-events-none flex items-center gap-space-sm bg-inverse-surface text-inverse-on-surface px-space-md py-3 rounded-xl shadow-xl"
-             [class.translate-y-24]="!lastToast().visible"
+        <!-- Toast Notifier (Ultra High Priority z-[9999], Visible Over Lightbox & Modals) -->
+        <div class="fixed top-6 right-6 z-[9999] transform transition-all duration-300 pointer-events-none flex items-center gap-3 bg-[#121215] text-white px-5 py-3 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.85)] border border-white/20 text-xs sm:text-sm font-semibold max-w-md"
+             [class.translate-y-[-30px]]="!lastToast().visible"
              [class.opacity-0]="!lastToast().visible"
              [class.translate-y-0]="lastToast().visible"
              [class.opacity-100]="lastToast().visible">
-          <span class="w-2.5 h-2.5 rounded-full bg-tertiary-fixed animate-ping"></span>
-          <span class="material-symbols-outlined text-[18px] text-tertiary-fixed">cloud_sync</span>
-          <span class="font-label-lg text-label-lg text-xs">{{ lastToast().message }}</span>
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+          <span class="material-symbols-outlined text-[20px] text-emerald-400 shrink-0">check_circle</span>
+          <span class="leading-snug">{{ lastToast().message }}</span>
         </div>
 
         <!-- Project Super-Header / Executive Banner -->
@@ -575,6 +575,56 @@ interface LightboxItem {
                 />
               </div>
 
+              <!-- Social Chat / Hilo de Respuestas de Producción & DP -->
+              @if (currentNote()) {
+                <div class="space-y-2 pt-2 border-t border-white/15">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span class="material-symbols-outlined text-sm">forum</span>
+                      <span>Mesa de Conversación & Chat ({{ currentNote()?.replies?.length || 0 }})</span>
+                    </label>
+                    <span class="text-[10px] text-white/50">Coordinación de Rodaje</span>
+                  </div>
+
+                  @if (currentNote()?.replies && currentNote()!.replies!.length > 0) {
+                    <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                      @for (rep of currentNote()!.replies; track rep.id) {
+                        <div class="p-2 rounded-lg bg-white/5 border border-white/10 text-xs flex flex-col gap-0.5">
+                          <div class="flex items-center justify-between text-[10px]">
+                            <span class="font-bold text-white flex items-center gap-1">
+                              <span class="w-1.5 h-1.5 rounded-full" [class.bg-primary]="rep.role === 'Admin'" [class.bg-amber-400]="rep.role !== 'Admin'"></span>
+                              {{ rep.author }} ({{ rep.role }})
+                            </span>
+                            <span class="text-white/40">{{ rep.timestamp }}</span>
+                          </div>
+                          <p class="text-white/90 italic pl-2 border-l-2 border-amber-400/50 leading-relaxed">{{ rep.message }}</p>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <p class="text-[11px] text-white/40 italic">Aún no hay respuestas del equipo de producción para este requerimiento.</p>
+                  }
+
+                  <!-- Input para responder en el chat -->
+                  <div class="flex items-center gap-2 pt-1">
+                    <input 
+                      type="text" 
+                      [(ngModel)]="replyInputText" 
+                      placeholder="Escribir mensaje al equipo de producción..."
+                      (keydown.enter)="sendReply()"
+                      class="flex-grow bg-[#0a0a0d] border border-white/20 focus:border-amber-400 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-white/40 focus:outline-none"
+                    />
+                    <button 
+                      type="button" 
+                      (click)="sendReply()" 
+                      class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px]">send</span>
+                      <span>Responder</span>
+                    </button>
+                  </div>
+                </div>
+              }
+
               <!-- Action buttons -->
               <div class="flex items-center justify-between pt-2 border-t border-white/15">
                 <div>
@@ -682,12 +732,17 @@ export class ProjectViewComponent implements OnInit {
   }
 
   toggleFavorite(id: string, name?: string): void {
-    this.favoritesService.toggleFavorite(id, name);
+    this.favoritesService.toggleFavoriteWithSessionRule(id, name);
+  }
+
+  getLikes(id: string): number {
+    return this.favoritesService.getLikes(id);
   }
 
   openLightboxItemById(id: string) {
     const item = this.allGalleryItems().find(i => i.id === id);
     if (item) {
+      this.favoritesService.recordMediaClick(item.id);
       this.currentLightbox.set(item);
       this.zoomLevel.set(1);
       this.isDownloadMenuOpen.set(false);
@@ -783,11 +838,21 @@ export class ProjectViewComponent implements OnInit {
     document.body.removeChild(link);
   }
 
-  // Control de Notas de DP
+  // Control de Notas de DP y Social Chat
   public isDpNoteModalOpen = signal<boolean>(false);
   public noteInputText: string = '';
   public noteCategory = signal<string>('Lentes / Óptica');
   public noteAuthor: string = 'Director de Fotografía (DP)';
+  public replyInputText: string = '';
+
+  sendReply() {
+    const cur = this.currentLightbox();
+    if (!cur || !this.replyInputText || !this.replyInputText.trim()) return;
+    const author = sessionStorage.getItem('pfe_client_name') || 'Director de Fotografía (DP)';
+    const role = (sessionStorage.getItem('pfe_client_role') as any) || 'DP';
+    this.favoritesService.addReplyToNote(cur.id, this.replyInputText, author, role);
+    this.replyInputText = '';
+  }
 
   public currentNote = computed<DpNote | undefined>(() => {
     const cur = this.currentLightbox();
@@ -834,7 +899,18 @@ export class ProjectViewComponent implements OnInit {
       this.favoritesService.triggerToast('Por favor escribe el requerimiento técnico para la nota.', 'warning');
       return;
     }
-    this.favoritesService.saveNote(cur.id, this.noteInputText, this.noteCategory(), this.noteAuthor);
+    this.favoritesService.saveNote(
+      cur.id, 
+      this.noteInputText, 
+      this.noteCategory(), 
+      this.noteAuthor,
+      {
+        locationName: cur.locationName,
+        mediaTitle: cur.title,
+        mediaThumbnailUrl: cur.url,
+        projectId: this.project()?.id
+      }
+    );
     this.isDpNoteModalOpen.set(false);
   }
 
@@ -850,7 +926,87 @@ export class ProjectViewComponent implements OnInit {
   }
 
   openDossier() {
-    this.favoritesService.triggerToast('Preparando Dossier PDF con ficha técnica completa...');
+    const proj = this.project();
+    if (!proj) return;
+    const filename = `Dossier_Tecnico_${proj.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_2026.html`;
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="utf-8">
+        <title>Dossier Técnico Ejecutivo — ${proj.title}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 40px; color: #1a1a1e; background: #fff; line-height: 1.5; }
+          .header { border-bottom: 3px solid #b91c1c; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+          h1 { margin: 0; font-size: 26px; color: #111; }
+          .badge { background: #b91c1c; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+          .meta { font-size: 13px; color: #666; margin-top: 5px; }
+          .section-title { font-size: 18px; font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 30px; margin-bottom: 15px; color: #b91c1c; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
+          th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+          th { background-color: #f8f8fa; font-weight: bold; }
+          .loc-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; }
+          .footer { margin-top: 50px; font-size: 11px; color: #888; border-top: 1px solid #eee; padding-top: 15px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <span class="badge">PFE Locaciones • Dossier Oficial</span>
+            <h1>${proj.title}</h1>
+            <div class="meta">Código de Proyecto: <strong>${proj.accessCode}</strong> • Revisión v${proj.revision}.0 Oficial</div>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: #666;">
+            <div>Fecha de Emisión: ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+            <div>Mesa de Producción: +52 (55) 8432-5627</div>
+          </div>
+        </div>
+
+        <div class="section-title">Resumen de Locaciones Seleccionadas para Rodaje</div>
+        <p style="font-size: 13px;">Documento oficial para dirección de arte, cinefotografía y producción ejecutiva. Todas las locaciones cuentan con verificación de sonido directo y estudio de capacidad eléctrica.</p>
+
+        ${proj.locations?.map((loc, idx) => `
+          <div class="loc-card">
+            <h3 style="margin-top:0; color:#111;">${idx + 1}. ${loc.title}</h3>
+            <p style="font-size: 12px; color: #555;">${loc.description || 'Locación técnica autorizada'}</p>
+            <table>
+              <tr>
+                <th>Parámetro Técnico</th>
+                <th>Especificación de Rodaje</th>
+              </tr>
+              <tr>
+                <td><strong>Capacidad Eléctrica</strong></td>
+                <td>Acometida trifásica 80A - 125A protegida. Apta para generadores 60kW - 100kW.</td>
+              </tr>
+              <tr>
+                <td><strong>Estudio de Sonido</strong></td>
+                <td>Direct Sound Verificado. Sin interferencias de tráfico pesado en horarios de llamado.</td>
+              </tr>
+              <tr>
+                <td><strong>Logística de Acceso</strong></td>
+                <td>Radio de giro para camiones 10T y estacionamiento para unidad móvil de rodaje.</td>
+              </tr>
+            </table>
+          </div>
+        `).join('')}
+
+        <div class="footer">
+          <p><strong>Aviso de Confidencialidad:</strong> La información contenida en este dossier es estrictamente confidencial y está protegida por acuerdos de reserva industrial (NDA). PFE Locaciones Audiovisuales S.A. de C.V.</p>
+        </div>
+        <script>window.print();</script>
+      </body>
+      </html>
+    `;
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (!win) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+    }
+    this.favoritesService.triggerToast(`Dossier PDF generado para "${proj.title}".`);
   }
 
   copyDirectLink() {
